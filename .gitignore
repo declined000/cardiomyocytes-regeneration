@@ -1,0 +1,23 @@
+# Python cache and local tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# OS/editor noise
+Thumbs.db
+.DS_Store
+
+# Raw data, pipeline outputs, and reports stay local / external storage (not in Git).
+/Cardiomyocytes/
+/final_report/
+/fl_results/
+/results/
+/results_gcamp/
+/results_v2/
+/video_inspection/
+/video_results/
+
+# Generated rich media (reproducible from code + local data)
+/fancy_gifs/

@@ -7,10 +7,10 @@ Experiment: hiPSC-derived cardiomyocytes on piezoelectric substrates
 Stains analyzed: Phalloidin (F-actin), DAPI (nuclei), Alpha-actinin (inconclusive)
 
 Conditions:
-  1. Cells only (control) - plastic surface
-  2. Gold (control plate) - gold substrate, no device
-  3. Gold (device) - gold on active piezoelectric device
-  4. Nonpoled (device) - inactive piezoelectric film (phalloidin only)
+  1. Au-PVDF Poled, Pulsed (B2 device) - gold+poled PVDF, mechanical+piezoelectric
+  2. Au-PVDF Poled, Un-pulsed (B2 control plate) - gold+poled PVDF, no stimulation
+  3. Au-PVDF Nonpoled, Pulsed (A3 device) - gold+nonpoled PVDF, mechanical only
+  4. Cells only (B3 control plate) - bare plastic, baseline
 """
 
 import numpy as np
@@ -45,18 +45,18 @@ PHALLOIDIN_CONDITIONS = {
         "phalloidin": DATA / "device-non-phalloidin-a3-image.tif",
         "dapi": DATA / "device-non-dapi-a3-image.tif",
     },
-    "Au-PVDF Nonpoled\nUn-pulsed (control)": {
+    "Cells only\n(baseline)": {
         "phalloidin": DATA / "control-b3-non-phalloidin.tif",
         "dapi": DATA / "control-b3-non-dapi.tif",
     },
 }
 
-# Mapping from old CSV condition names to new 2x2 labels
+# Mapping from old CSV condition names to corrected labels
 CSV_TO_LABEL = {
     "Gold\n(device)": "Au-PVDF Poled\nPulsed (device)",
     "Gold\n(control plate)": "Au-PVDF Poled\nUn-pulsed (control)",
     "Nonpoled\n(device)": "Au-PVDF Nonpoled\nPulsed (device)",
-    "Cells only\n(control)": "Au-PVDF Nonpoled\nUn-pulsed (control)",
+    "Cells only\n(control)": "Cells only\n(baseline)",
 }
 
 
@@ -68,14 +68,14 @@ def remap_conditions(df):
 ACTININ_CONDITIONS = {
     "Au-PVDF Poled\nUn-pulsed (control)": DATA / "control-gold1-a2-alphaact.tif",
     "Au-PVDF Poled\nPulsed (device)": DATA / "device-gold1-alphaactinin-A2-image.tif",
-    "Au-PVDF Nonpoled\nUn-pulsed (control)": DATA / "control-a3-alpha-non.tif",
+    "Cells only\n(baseline)": DATA / "control-a3-alpha-non.tif",
 }
 
 COLORS = {
     "Au-PVDF Poled\nPulsed (device)": "#ff9966",
     "Au-PVDF Poled\nUn-pulsed (control)": "#ffd966",
     "Au-PVDF Nonpoled\nPulsed (device)": "#a8d5a2",
-    "Au-PVDF Nonpoled\nUn-pulsed (control)": "#7fbfff",
+    "Cells only\n(baseline)": "#7fbfff",
 }
 
 
@@ -255,8 +255,8 @@ def fig4_factin(df):
             x = np.random.normal(j + 1, 0.04, size=len(d))
             ax.scatter(x, d, alpha=0.3, s=8, color="black", zorder=5)
 
-        # Key 2x2 comparisons: pulsed vs un-pulsed (poled), poled vs nonpoled (pulsed), poled vs nonpoled (un-pulsed)
-        pairs_to_test = [(0, 1), (0, 2), (1, 3)]
+        # Key comparisons: Poled Pulsed vs Poled Unpulsed, Poled vs Nonpoled (pulsed), treatment vs baseline
+        pairs_to_test = [(0, 1), (0, 2), (0, 3)]
         max_y = max(np.max(d) for d in data if len(d) > 0)
         for pi, (i1, i2) in enumerate(pairs_to_test):
             if len(data[i1]) > 0 and len(data[i2]) > 0:
@@ -574,27 +574,36 @@ def write_text_summary(df, pw_df):
     lines.append("=" * 80)
     lines.append("")
 
-    lines.append("EXPERIMENTAL DESIGN (2x2 Factorial)")
+    lines.append("EXPERIMENTAL DESIGN")
     lines.append("-" * 40)
-    lines.append("Cell type: hiPSC-derived cardiomyocytes (Tammy's cells)")
+    lines.append("Cell type: hiPSC-derived cardiomyocytes (XR1)")
     lines.append("Stains: Phalloidin (F-actin), DAPI (nuclei), Alpha-actinin (Z-lines)")
     lines.append("")
-    lines.append("2x2 Factorial Design:")
-    lines.append("  Factor 1 - Material: Au-PVDF Poled vs Au-PVDF Nonpoled")
-    lines.append("  Factor 2 - Stimulation: Pulsed (on device) vs Un-pulsed (control plate)")
+    lines.append("Well layout (6-well plates):")
+    lines.append("  Control plate: x2 = Gold (Au-PVDF Poled), x3 = Cells only (bare plastic)")
+    lines.append("  Device plate:  x2 = Gold (Au-PVDF Poled), x3 = Nonpoled (Au-PVDF Nonpoled)")
+    lines.append("  Rows A,B = XR1; Row C = GCaMP6f")
     lines.append("")
-    lines.append("  Conditions:")
-    lines.append("    1. Au-PVDF Poled, Pulsed (device)       - active piezoelectric stimulation")
-    lines.append("    2. Au-PVDF Poled, Un-pulsed (control)   - poled material, no stimulation")
-    lines.append("    3. Au-PVDF Nonpoled, Pulsed (device)    - pulsed but non-piezoelectric")
-    lines.append("    4. Au-PVDF Nonpoled, Un-pulsed (control)- baseline, no material/stimulation effect")
+    lines.append("  Conditions (Phalloidin analysis):")
+    lines.append("    1. Au-PVDF Poled, Pulsed (B2 device)   - gold+poled PVDF, mechanical+piezoelectric")
+    lines.append("    2. Au-PVDF Poled, Un-pulsed (B2 ctrl)  - gold+poled PVDF, no stimulation")
+    lines.append("    3. Au-PVDF Nonpoled, Pulsed (A3 device)- gold+nonpoled PVDF, mechanical only")
+    lines.append("    4. Cells only (B3 ctrl)                 - bare plastic, baseline")
     lines.append("")
-    lines.append("  Key comparisons:")
-    lines.append("    - Pulsation effect on poled:    condition 1 vs 2")
-    lines.append("    - Piezoelectric effect (pulsed): condition 1 vs 3")
-    lines.append("    - Material effect (un-pulsed):  condition 2 vs 4")
+    lines.append("  NOTE: This is NOT a balanced 2x2 factorial. Control plate column 3")
+    lines.append("  is 'Cells only' (bare plastic), NOT nonpoled PVDF.")
+    lines.append("")
+    lines.append("  Clean comparisons:")
+    lines.append("    - 1 vs 2: Effect of pulsation on poled PVDF (mechanical + piezoelectric)")
+    lines.append("    - 1 vs 3: Piezoelectric effect specifically (poled vs nonpoled, both pulsed)")
+    lines.append("    - Any vs 4: Overall treatment vs untreated baseline")
+    lines.append("")
+    lines.append("  Confounded comparisons:")
+    lines.append("    - 3 vs 4: Differs in BOTH substrate (PVDF vs plastic) AND stimulation")
+    lines.append("    - 2 vs 4: Substrate effect (Au-PVDF vs bare plastic), not poled vs nonpoled")
     lines.append("")
     lines.append("Note: Alpha-actinin images were INCONCLUSIVE (see below).")
+    lines.append("      B3 device (Nonpoled 2) film detached - unable to stain.")
     lines.append("")
 
     lines.append("=" * 80)
@@ -647,21 +656,24 @@ def write_text_summary(df, pw_df):
         lines.append(f"     {row['group_1']} vs {row['group_2']}: p = {row['p_value']:.2e} {row['significance']}")
     lines.append("")
 
-    lines.append("  INTERPRETATION (2x2 Design):")
+    lines.append("  INTERPRETATION:")
+    lines.append("")
     lines.append("  - PIEZOELECTRIC EFFECT (Poled Pulsed vs Nonpoled Pulsed):")
     lines.append("    The poled pulsed condition shows LOWER actin coherency, consistent with")
     lines.append("    maturation-associated cytoskeletal remodeling (transition from stress")
-    lines.append("    fibers to sarcomeric actin). This isolates the piezoelectric contribution.")
+    lines.append("    fibers to sarcomeric actin). This cleanly isolates the piezoelectric")
+    lines.append("    contribution since both conditions are pulsed on the device.")
     lines.append("")
-    lines.append("  - PULSATION EFFECT (Poled Pulsed vs Poled Un-pulsed):")
-    lines.append("    Mechanical stimulation on poled material drives changes in F-actin")
-    lines.append("    organization, demonstrating active device stimulation has a biological")
-    lines.append("    effect beyond the substrate material alone.")
+    lines.append("  - PULSATION + PIEZO EFFECT (Poled Pulsed vs Poled Un-pulsed):")
+    lines.append("    Same Au-PVDF Poled material, only difference is active pulsation.")
+    lines.append("    Shows the combined mechanical + piezoelectric stimulation drives")
+    lines.append("    measurable changes in F-actin organization.")
     lines.append("")
-    lines.append("  - MATERIAL EFFECT (Poled Un-pulsed vs Nonpoled Un-pulsed):")
+    lines.append("  - SUBSTRATE vs BASELINE (Au-PVDF Poled Un-pulsed vs Cells only):")
     lines.append("    Poled material on the control plate shows higher F-actin intensity and")
-    lines.append("    coverage versus nonpoled, suggesting the material properties contribute")
-    lines.append("    even without pulsation.")
+    lines.append("    coverage versus bare plastic. Note: this compares Au-PVDF+gold to bare")
+    lines.append("    plastic (not poled vs nonpoled), so any difference reflects the combined")
+    lines.append("    effect of gold coating + PVDF surface properties.")
     lines.append("")
 
     lines.append("=" * 80)
@@ -695,9 +707,9 @@ def write_text_summary(df, pw_df):
     lines.append("Status: INCONCLUSIVE - data not usable for quantitative analysis")
     lines.append("")
     lines.append("  Reason: No recognizable cell morphology in any of the 3 images.")
-    lines.append("  - Cells only: Diffuse, gradient-like signal (no visible cells or Z-lines)")
-    lines.append("  - Gold (control plate): Dominated by gold film bubbles and debris")
-    lines.append("  - Gold (device): Scratches and smudges on substrate surface")
+    lines.append("  - Cells only (A3 ctrl): Diffuse, gradient-like signal (no visible cells)")
+    lines.append("  - Au-PVDF Poled Un-pulsed (A2 ctrl): Gold film bubbles and debris")
+    lines.append("  - Au-PVDF Poled Pulsed (A2 device): Scratches and smudges on surface")
     lines.append("")
     lines.append("  Likely causes:")
     lines.append("  - Old cells with potentially degraded protein targets")
@@ -718,32 +730,35 @@ def write_text_summary(df, pw_df):
     lines.append("     organization compared to all other conditions, consistent with")
     lines.append("     cardiomyocyte maturation (transition from stress fibers to sarcomeric actin).")
     lines.append("")
-    lines.append("  2. THE EFFECT IS SPECIFIC TO ACTIVE PIEZOELECTRIC STIMULATION")
-    lines.append("     Poled Pulsed vs Nonpoled Pulsed comparison demonstrates that the")
-    lines.append("     piezoelectric effect (charge generation), not just mechanical pulsation")
-    lines.append("     or substrate geometry, drives the remodeling.")
+    lines.append("  2. THE EFFECT IS SPECIFIC TO PIEZOELECTRIC CHARGE GENERATION")
+    lines.append("     Poled Pulsed vs Nonpoled Pulsed (both on device, both pulsed)")
+    lines.append("     demonstrates that piezoelectric charge, not just mechanical pulsation,")
+    lines.append("     drives the cytoskeletal remodeling.")
     lines.append("")
     lines.append("  3. PULSATION ON POLED MATERIAL HAS A DISTINCT EFFECT")
-    lines.append("     Poled Pulsed vs Poled Un-pulsed shows that active mechanical")
-    lines.append("     stimulation of poled PVDF produces measurable differences in")
-    lines.append("     F-actin organization beyond the substrate material alone.")
+    lines.append("     Poled Pulsed vs Poled Un-pulsed (same Au-PVDF material) shows that")
+    lines.append("     active device stimulation produces measurable differences in F-actin")
+    lines.append("     organization beyond the substrate material alone.")
     lines.append("")
-    lines.append("  4. MATERIAL EFFECT (POLED vs NONPOLED) EXISTS EVEN WITHOUT PULSATION")
-    lines.append("     Poled Un-pulsed vs Nonpoled Un-pulsed (control plates) shows")
-    lines.append("     differences in F-actin intensity/coverage, suggesting the gold-coated")
-    lines.append("     poled PVDF surface properties contribute independently.")
-    lines.append("")
-    lines.append("  5. CELL MORPHOLOGY IS LARGELY UNCHANGED")
-    lines.append("     No significant differences in cell area, shape, or elongation between")
-    lines.append("     conditions, suggesting cytoskeletal changes are internal reorganization")
-    lines.append("     rather than gross morphological remodeling.")
-    lines.append("")
-    lines.append("  6. SUPERVISOR QUESTION: PULSED vs UN-PULSED Au-PVDF DIFFERENCE?")
+    lines.append("  4. SUPERVISOR QUESTION: PULSED vs UN-PULSED Au-PVDF DIFFERENCE?")
     lines.append("     YES. Au-PVDF Poled Pulsed (device) vs Au-PVDF Poled Un-pulsed (control)")
     lines.append("     shows statistically significant differences in actin coherency and")
     lines.append("     texture metrics (see Fig4, Fig8, pairwise_comparisons.csv).")
     lines.append("")
-    lines.append("  7. LIMITATIONS")
+    lines.append("  5. SUBSTRATE IMPROVES F-ACTIN vs BARE PLASTIC")
+    lines.append("     All substrate conditions show higher F-actin intensity and coverage")
+    lines.append("     compared to cells only (bare plastic baseline). Note: the 'Cells only'")
+    lines.append("     condition has NO PVDF substrate, so this reflects Au-PVDF+gold vs plastic.")
+    lines.append("")
+    lines.append("  6. CELL MORPHOLOGY IS LARGELY UNCHANGED")
+    lines.append("     No significant differences in cell area, shape, or elongation between")
+    lines.append("     conditions, suggesting cytoskeletal changes are internal reorganization")
+    lines.append("     rather than gross morphological remodeling.")
+    lines.append("")
+    lines.append("  7. DESIGN LIMITATIONS")
+    lines.append("     - NOT a balanced 2x2: control plate column 3 is 'Cells only' (bare")
+    lines.append("       plastic), not nonpoled PVDF. Missing 'Nonpoled Un-pulsed' condition.")
+    lines.append("     - B3 device (Nonpoled 2) film detached during staining.")
     lines.append("     - Single image per condition (1 field of view each)")
     lines.append("     - Old cells from another lab (not optimal)")
     lines.append("     - Alpha-actinin staining failed (inconclusive)")
@@ -752,6 +767,7 @@ def write_text_summary(df, pw_df):
     lines.append("")
     lines.append("  8. NEXT STEPS FOR EXPERIMENT 2")
     lines.append("     - Fresh hiPSC-CMs with optimized culture protocol")
+    lines.append("     - Include 'Nonpoled Un-pulsed' control for balanced design")
     lines.append("     - Multiple fields of view per condition")
     lines.append("     - Higher magnification for sarcomere-level imaging")
     lines.append("     - Optimized alpha-actinin staining for sarcomere quantification")
