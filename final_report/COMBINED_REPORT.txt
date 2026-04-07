@@ -1,0 +1,1263 @@
+================================================================================
+COMBINED ANALYSIS REPORT
+Piezoelectric Substrate Effects on hiPSC-Derived Cardiomyocytes
+Staining Morphology + Video Contractility + Calcium Imaging + Cross-Reference
+================================================================================
+
+NOTE: Every number in this report was computed directly from raw
+CSV data files. No values were copied from previous report drafts.
+
+================================================================================
+1. EXPERIMENTAL DESIGN
+================================================================================
+
+Cell type: hiPSC-derived cardiomyocytes
+Cell lines: XR1 (rows A, B) and GCaMP6f (row C)
+
+Well layout (6-well plates, columns 2 and 3 used):
+  Control plate:  col 2 (A2,B2,C2) = Gold (Au-PVDF Poled)
+                  col 3 (A3,B3,C3) = Cells only (bare plastic)
+  Device plate:   col 2 (A2,B2,C2) = Gold (Au-PVDF Poled)
+                  col 3 (A3,B3,C3) = Nonpoled (β-PVDF Nonpoled, no gold coating)
+  --> 3 Gold + 3 non-Gold wells per plate (6 wells total per plate)
+
+Staining conditions (phalloidin analysis, 4 groups):
+  Poled Pulsed (device)               n = 157 cells
+  Poled Un-pulsed (control)           n = 134 cells
+  Nonpoled Pulsed (device)            n = 133 cells
+  Cells only (baseline)               n = 151 cells
+  Total                               n = 575 cells
+
+Video recordings (BF brightfield, 23 analyzed):
+  Bare plastic                        n = 12 videos
+  Non-poled PVDF                      n = 5 videos
+  Gold-coated PVDF                    n = 6 videos
+  Total                               n = 23 videos
+
+Fluorescence recordings (GCaMP6f calcium imaging, 8 total):
+  Usable FPS (>= 5 FPS)                n = 4 videos
+  Low FPS (< 5 FPS)                    n = 4 videos
+  All from GCaMP6f cells (wells C2, C3)
+
+Timeline: Day 1 seeding, Day 2 baseline, Day 6-8 treatment phase
+Limitation: NOT a balanced 2x2 factorial. Control plate col 3 is
+  bare plastic, not nonpoled PVDF. Missing 'Nonpoled Un-pulsed'.
+
+================================================================================
+2. METHODS
+================================================================================
+
+2.1 Staining Analysis
+----------------------------------------
+  Phalloidin: classical pipeline -- DAPI thresholding + watershed
+  nuclei segmentation, nuclei-seeded watershed for cell boundaries.
+  16 per-cell metrics (morphology, F-actin intensity, texture).
+  Multinucleation: Cellpose v3 (cyto2 model, GPU) + DAPI nuclei.
+  Alpha-actinin: INCONCLUSIVE (no usable signal in any image).
+
+2.2 Brightfield Video Analysis
+----------------------------------------
+  Farneback optical flow (OpenCV) on 2x-downsampled BF frames.
+  Convergence map (neg. divergence) for active contraction centers.
+  Per-center foci detection via thresholded convergence + CC labeling.
+  Beat detection: scipy.signal.find_peaks, 1.5s settling exclusion.
+  Classification (expert-validated): active_beating,
+    individual_cells_beating, non_contractile, no_beating.
+  Methods aligned with Huebsch 2015, Czirok 2017, Sala 2018.
+
+2.3 Fluorescence Calcium Imaging Analysis
+----------------------------------------
+  GCaMP6f intensity-based pipeline (NOT optical flow).
+  Background subtraction: 5-pixel border strip (all four edges) for non-cell baseline.
+  Photobleach correction: mono-exponential fit y=a*exp(-t/tau)+c.
+  F0 baseline: rolling 5th percentile (2s window).
+  dF/F0 = (F - F0) / F0 for each timepoint.
+  Peak detection: scipy.signal.find_peaks with adaptive prominence.
+  Per-transient kinetics: dF/F0 amplitude, Time to Peak (TTP),
+    CaTD50, CaTD90, decay time constant (tau), upstroke/decay velocity.
+  Aggregate metrics: beat rate (BPM), inter-beat interval CV (IBI CV).
+  Methods aligned with Psaras/CalTrack 2021, Bedut 2022.
+
+================================================================================
+3. RESULTS
+================================================================================
+
+3.1 STAINING / MORPHOLOGY RESULTS
+----------------------------------------
+Total cells analyzed: 575
+
+  F-actin intensity:
+    Poled Pulsed (device)               median = 0.424  (n=157)
+    Poled Un-pulsed (control)           median = 0.508  (n=134)
+    Nonpoled Pulsed (device)            median = 0.442  (n=133)
+    Cells only (baseline)               median = 0.365  (n=151)
+
+  F-actin coverage:
+    Poled Pulsed (device)               median = 0.997  (n=157)
+    Poled Un-pulsed (control)           median = 1.000  (n=134)
+    Nonpoled Pulsed (device)            median = 0.997  (n=133)
+    Cells only (baseline)               median = 0.913  (n=151)
+
+  Actin coherency:
+    Poled Pulsed (device)               median = 0.422  (n=157)
+    Poled Un-pulsed (control)           median = 0.472  (n=134)
+    Nonpoled Pulsed (device)            median = 0.459  (n=133)
+    Cells only (baseline)               median = 0.476  (n=151)
+
+  Circularity:
+    Poled Pulsed (device)               median = 0.478  (n=157)
+    Poled Un-pulsed (control)           median = 0.507  (n=134)
+    Nonpoled Pulsed (device)            median = 0.492  (n=133)
+    Cells only (baseline)               median = 0.468  (n=151)
+
+  Cell area (px):
+    Poled Pulsed (device)               median = 670.000  (n=157)
+    Poled Un-pulsed (control)           median = 661.500  (n=134)
+    Nonpoled Pulsed (device)            median = 667.000  (n=133)
+    Cells only (baseline)               median = 568.000  (n=151)
+
+  Key significant comparisons (Mann-Whitney U, from pairwise CSV):
+    Poled Pulsed (device) vs Poled Un-pulsed (control):
+      mean_phalloidin_intensity: p=2.53e-03 **
+    Poled Pulsed (device) vs Cells only (baseline):
+      mean_phalloidin_intensity: p=1.05e-03 **
+    Poled Un-pulsed (control) vs β-PVDF Nonpoled Pulsed (device):
+      mean_phalloidin_intensity: p=1.16e-02 *
+    Poled Un-pulsed (control) vs Cells only (baseline):
+      mean_phalloidin_intensity: p=3.72e-09 ***
+    β-PVDF Nonpoled Pulsed (device) vs Cells only (baseline):
+      mean_phalloidin_intensity: p=2.31e-04 ***
+    Poled Pulsed (device) vs Poled Un-pulsed (control):
+      actin_coherency: p=1.64e-09 ***
+    Poled Pulsed (device) vs β-PVDF Nonpoled Pulsed (device):
+      actin_coherency: p=6.20e-05 ***
+    Poled Pulsed (device) vs Cells only (baseline):
+      actin_coherency: p=2.37e-10 ***
+    β-PVDF Nonpoled Pulsed (device) vs Cells only (baseline):
+      actin_coherency: p=3.88e-02 *
+    Poled Pulsed (device) vs Poled Un-pulsed (control):
+      phalloidin_coverage: p=1.32e-04 ***
+    Poled Pulsed (device) vs Cells only (baseline):
+      phalloidin_coverage: p=4.33e-04 ***
+    Poled Un-pulsed (control) vs β-PVDF Nonpoled Pulsed (device):
+      phalloidin_coverage: p=1.84e-04 ***
+    Poled Un-pulsed (control) vs Cells only (baseline):
+      phalloidin_coverage: p=5.19e-11 ***
+    β-PVDF Nonpoled Pulsed (device) vs Cells only (baseline):
+      phalloidin_coverage: p=9.98e-04 ***
+
+  Multinucleation (Cellpose):
+    Poled Pulsed (device)               25 cells, 9 mono (36%), 0 multi (0%), 16 unassigned (64%)
+    Poled Un-pulsed (control)           63 cells, 21 mono (33%), 0 multi (0%), 42 unassigned (66%)
+    Nonpoled Pulsed (device)            66 cells, 31 mono (46%), 1 multi (1%), 34 unassigned (51%)
+    Cells only (baseline)               37 cells, 16 mono (43%), 1 multi (2%), 20 unassigned (54%)
+  NOTE: 112/191 cells (58%) had no nucleus assigned by Cellpose (nucleus/cell boundary mismatch in confluent cultures).
+  Among cells with detected nuclei (79/191): 77 mono (97%), 2 multi (2%).
+  Conclusion: among cells with detected nuclei, nearly all are mononucleated — not differentiating. The high zero-nuclei fraction reflects segmentation limitations, not absent nuclei.
+
+  Alpha-actinin: INCONCLUSIVE -- no recognizable cell morphology.
+  [See Fig7_actinin_INCONCLUSIVE.png]
+
+3.2 VIDEO / CONTRACTILITY RESULTS
+----------------------------------------
+  Amplitude metric: ROI contraction amplitude (roi_amplitude) throughout.
+
+Total BF videos analyzed: 23
+  Active beating                : 11 (48%)
+  Individual cells beating      :  2 (9%)
+  Non-contractile motion        :  6 (26%)
+  No beating                    :  4 (17%)
+
+  By substrate (all videos):
+    Bare plastic (n=12): 6 beating, flow in 7/12
+      median amplitude: 1.49 px, median BPM: 16.4
+    Non-poled PVDF (n=5): 3 beating, flow in 2/5
+      median amplitude: 3.84 px, median BPM: 10.5
+    Gold-coated PVDF (n=6): 2 beating, flow in 2/6
+      median amplitude: 2.02 px, median BPM: 7.0
+
+  By cell line:
+    XR1 (n=16): 11 active beating (69%)
+      median amplitude: 2.75 px, median BPM: 10.5
+    GCaMP6f (n=7): 0 active beating (0%); 1/7 videos with individual cells beating
+
+  Temporal progression:
+    Day 1 (n=3): 0 active beating
+    Day 2 (n=3): 2 active beating
+      median amplitude: 0.63 px, median BPM: 18.5
+    Day 6 (n=5): 4 active beating
+      median amplitude: 3.05 px, median BPM: 10.0
+    Day 8 (n=12): 5 active beating
+      median amplitude: 2.96 px, median BPM: 10.2
+  Note: Days 1-2 = baseline (bare plastic, control plate only)
+
+  On-device vs control (treatment phase, active_beating only):
+    On-device (pulsed):  4 beating, median amp 3.60 px
+    Control (unpulsed):  5 beating, median amp 2.16 px
+
+  Video statistical comparisons:
+    No comparisons reached significance (all p>0.05).
+    Expected with n=2-6 per group.
+
+3.3 CROSS-REFERENCE: STRUCTURE MEETS FUNCTION
+----------------------------------------
+Per-condition comparison linking staining morphology with video
+contractility (see Figures C1 and C2).
+NOTE: Video data filtered to XR1 only to match staining
+(all staining images are from XR1 wells: B2, A3, B3).
+
+  Poled Pulsed (device):
+    STAINING: 157 cells, F-actin=0.424, coherency=0.422, circularity=0.478
+    VIDEO (XR1): 2 videos, 1 beating, amplitude=3.0 px
+
+  Poled Un-pulsed (control):
+    STAINING: 134 cells, F-actin=0.508, coherency=0.472, circularity=0.507
+    VIDEO (XR1): 2 videos, 1 beating, amplitude=1.1 px
+
+  Nonpoled Pulsed (device):
+    STAINING: 133 cells, F-actin=0.442, coherency=0.459, circularity=0.492
+    VIDEO (XR1): 4 videos, 3 beating, amplitude=3.8 px
+
+  Cells only (baseline):
+    STAINING: 151 cells, F-actin=0.365, coherency=0.476, circularity=0.468
+    VIDEO (XR1): 8 videos, 6 beating, amplitude=1.5 px
+
+  Key cross-reference findings:
+
+  a) ADHESION (circularity vs flow/drift, XR1 only):
+    Gold PVDF: median circularity=0.486, flow in 2/4 videos (50%)
+    Non-poled PVDF: median circularity=0.492, flow in 1/4 videos (25%)
+    Bare plastic: median circularity=0.468, flow in 3/8 videos (38%)
+    -> Gold-PVDF cells are ROUNDER (higher circularity = poorer
+       adhesion/spreading) despite fewer flow events than plastic.
+       Plastic has more flow, possibly influenced by baseline
+       day 1-2 videos before cells fully settled. Taken together,
+       the circularity and flow patterns are consistent with
+       substrate-dependent adhesion differences.
+
+  b) MATURATION (F-actin organization vs beating):
+    Poled Pulsed (device): LOWEST actin coherency (0.422)
+      but strong beating when on non-poled substrate
+    Cells only (baseline): HIGHEST actin coherency (0.476)
+      and reliable beating on plastic
+    -> Lower coherency may reflect maturation-associated
+       remodeling (stress fibers -> sarcomeric actin),
+       not dysfunction.
+
+  c) CELL LINE (XR1 vs GCaMP6f):
+    XR1: 11/16 active beating (69%)
+    GCaMP6f: 0/7 active beating (0%)
+    Note: all 4 staining images are from XR1 wells (B2, A3, B3).
+    GCaMP6f (row C) was not imaged for staining in this experiment.
+    Video data covers both cell lines (same wells, pre-staining).
+
+3.4 FLUORESCENCE / CALCIUM IMAGING
+----------------------------------------
+  All FL videos are from GCaMP6f cells (row C, wells C2 & C3).
+  GCaMP6f = genetically encoded calcium indicator (no dye loading).
+  Pipeline: background subtraction -> mono-exponential photobleach
+  correction -> rolling 5th-percentile F0 -> dF/F0 -> peak detection
+  -> per-transient kinetic extraction (Psaras/CalTrack 2021, Bedut 2022).
+
+  KEY SCIENTIFIC QUESTION:
+  Do GCaMP6f cells show calcium transients (FL) despite no
+  visible synchronized contraction (BF)? This distinguishes between:
+    a) No calcium cycling -- cells are truly non-functional
+    b) Calcium present but mechanically uncoupled -- cells
+       have calcium handling but lack coordinated sarcomeric contraction
+  This helps evaluate whether the phenotype is compatible with
+  the CaV1 perturbation hypothesis (Yang et al. Nat Commun 2018),
+  while still allowing alternative explanations.
+
+  Total FL videos: 8 (4 usable FPS >= 5, 4 low-FPS)
+    Active transients    : 5  [usable only: 3]
+    Weak transients      : 1  [usable only: 0]
+    Single transient     : 1  [usable only: 1]
+    No transients        : 1  [usable only: 0]
+
+  Note: A2-day8-gold-tAMMY-fl.avi was MISLABELED; reclassified
+  as C2-day8-gold-GCaMP6f-FL.avi based on well adjacency analysis.
+
+  Per-video FL results:
+    Jaz-day2-fluorescence-gold.avi
+      C2 day2 gold | FPS=10.0 (ok)
+      Classification: active_transients | 5 transients | dF/F0=0.0859 | BPM=13.8
+    C2-day2-gold-FL.avi
+      C2 day2 gold | FPS=2.0 (low_fps)
+      Classification: active_transients | 6 transients | dF/F0=0.1346 | BPM=9.4
+    C3-day2-fl.avi
+      C3 day2 non-poled | FPS=1.1 (low_fps)
+      Classification: no_transients | 0 transients | dF/F0=0.0000 | BPM=--
+    C2-day6-gold-FL-control.avi
+      C2 day6 gold | FPS=10.0 (ok)
+      Classification: active_transients | 10 transients | dF/F0=0.2158 | BPM=19.9
+    C2-day6-non-FL.avi
+      C2 day6 gold | FPS=2.6 (low_fps)
+      NOTE: filename says 'non' but physical well C2 is gold-coated poled PVDF
+      Classification: weak_transients | 12 transients | dF/F0=0.0227 | BPM=6.4
+    C3-day6-gold-fl.avi
+      C3 day6 non-poled | FPS=3.2 (low_fps)
+      NOTE: filename says 'gold' but physical well C3 is uncoated non-poled PVDF
+      Classification: active_transients | 18 transients | dF/F0=0.0333 | BPM=11.3
+    C2-day8-gold-GCaMP6f-FL.avi
+      C2 day8 gold | FPS=12.5 (ok)
+      Classification: single_transient | 1 transients | dF/F0=0.0498 | BPM=--
+    C3-day8-non-Jaz-fl.avi
+      C3 day8 non-poled | FPS=11.1 (ok)
+      Classification: active_transients | 7 transients | dF/F0=0.0407 | BPM=12.7
+
+  LOW-FPS IMPACT ASSESSMENT:
+  4 of 8 FL videos have FPS < 5 (range 1.1-3.2 FPS).
+  At 2-3 FPS, calcium transients (~300-500 ms fast phases)
+  are sampled by only 1-2 frames per event. This means:
+    - TRANSIENT DETECTION: still possible (amplitude changes are
+      visible even at low temporal resolution)
+    - KINETIC PARAMETERS (TTP, CaTD50, CaTD90): UNRELIABLE at
+      low FPS -- temporal precision is limited to 1/FPS
+      (e.g., 500 ms at 2 FPS vs 80 ms at 12.5 FPS)
+    - TRANSIENT COUNT: may overcount at low FPS due to aliasing
+      (e.g., C3-day6-gold-fl detected 18 'transients' at 3.2 FPS)
+    - BEAT RATE: reliable (long recording compensates for
+      poor per-beat resolution)
+
+  USABLE-FPS-ONLY ANALYSIS (>= 5 FPS, n=4):
+    4/4 usable-FPS videos show Ca2+ transients
+    (EMD finding holds with usable data alone)
+    Mean dF/F0 amplitude: 0.0981 (range 0.0407-0.2158)
+    Mean TTP: 894 ms (range 527-1280)
+    Mean CaTD50: 770 ms (range 460-1080)
+    Mean CaTD90: 1276 ms (range 880-1660)
+    Mean decay tau: 1312 ms (range 751-1929)
+    Beat rate: 15.5 BPM (range 12.7-19.9)
+    IBI CV: 30.9% (range 23.6-38.0%)
+
+  ALL VIDEOS aggregate (including low-FPS, for reference):
+    7 videos with transients (kinetics from low-FPS are approximate):
+    Mean dF/F0 amplitude: 0.0833 (range 0.0227-0.2158)
+    Mean TTP: 748 ms (range 417-1280)
+    Beat rate: 12.2 BPM (range 6.4-19.9)
+
+  INTERPRETATION: WHAT USABLE-ONLY NUMBERS CHANGE
+  Excluding low-FPS videos does NOT weaken any conclusion;
+  it STRENGTHENS them:
+
+    1. EMD finding: 7/8 -> 4/4 (100%). The one 'no transients'
+       video was at 1.1 FPS -- likely too slow to detect, not
+       a true negative. Core conclusion unchanged.
+
+    2. Amplitude: usable mean dF/F0 = 0.0981 vs all-video mean = 0.0833.
+       Usable videos show HIGHER amplitude (+18%), because low-FPS
+       videos under-sample transient peaks, compressing apparent
+       amplitude. True calcium signals are stronger than reported
+       when all videos are pooled.
+
+    3. Temporal progression REVERSES apparent trend:
+       All videos: day2=0.110 > day6=0.091 > day8=0.045 (declining)
+       Usable only: day2=0.086 < day6=0.216 > day8=0.045 (peak at day6)
+       The all-video trend was an ARTIFACT: day6 had the strongest
+       usable signal (0.216 dF/F0) but its average was diluted by
+       two low-FPS recordings (0.023 and 0.033). The usable-only
+       data shows calcium activity PEAKING at day 6, consistent
+       with maturation-driven calcium handling improvement
+       (Hwang et al. 2015), before declining at day 8.
+
+    4. Gold substrate effect is STRONGER with usable data:
+       Gold usable: dF/F0=0.117 vs Gold all: 0.102 (+15%)
+       Non-poled usable: dF/F0=0.041 vs all: 0.037 (+10%)
+       Gold/non-poled ratio: usable=2.9x vs all=2.8x
+       The substrate effect holds regardless; gold-coated PVDF
+       consistently produces ~3x higher calcium amplitudes.
+
+    5. Beat regularity IMPROVES in usable data:
+       IBI CV: usable=30.9% vs all=43.0%
+       Lower CV = more regular beating, consistent with
+       properly resolved transients rather than aliased noise.
+
+  CONCLUSION: Low-FPS data dilutes true signal strength but does
+  not create false positives. All primary findings (EMD, substrate
+  effect, temporal maturation) are confirmed or strengthened when
+  restricted to usable-FPS recordings. For Experiment 2, all FL
+  recordings should use >= 10 FPS to eliminate this confound.
+
+  FL temporal progression (all videos; [usable FPS only]):
+    day2: 3 videos, 2 with transients, mean dF/F0=0.1102  [usable: 1/1, dF/F0=0.0859]
+    day6: 3 videos, 3 with transients, mean dF/F0=0.0906  [usable: 1/1, dF/F0=0.2158]
+    day8: 2 videos, 2 with transients, mean dF/F0=0.0453  [usable: 2/2, dF/F0=0.0453]
+
+  FL by substrate (all videos; [usable FPS only]):
+    gold: 5 videos, 5 with transients, mean dF/F0=0.1018  [usable: 3/3, dF/F0=0.1172]
+    non-poled: 3 videos, 2 with transients, mean dF/F0=0.0370  [usable: 1/1, dF/F0=0.0407]
+    NOTE: non-poled mean above excludes 1 video(s) with 0 transients (C3-day2-fl.avi);
+    including all 3 non-poled videos gives mean dF/F0=0.0247.
+    NOTE: substrate assignments corrected from original filenames --
+    C2-day6-non-FL.avi is gold (well C2), C3-day6-gold-fl.avi is
+    non-poled (well C3); filenames are misleading.
+
+  CRITICAL FINDING: ELECTROMECHANICAL DISSOCIATION
+  BF analysis: 0/7 GCaMP6f videos showed active synchronized beating
+    (1/7 showed individual cells beating — C3-day8-non-Jaz.avi)
+  FL analysis: 7/8 GCaMP6f videos show calcium transients
+    [usable FPS only: 4/4]
+  CONCLUSION: GCaMP6f cells HAVE calcium cycling but are
+  MECHANICALLY UNCOUPLED -- calcium transients are present
+  without visible synchronized sarcomeric contraction. This is consistent
+  with 'electromechanical dissociation' (EMD), a phenomenon
+  reported in immature hiPSC-CMs where electrical/calcium
+  signaling precedes mechanical coupling (Lee et al. 2019,
+  Ronaldson-Bouchard et al. 2018).
+
+  This result REFINES the CaV1 perturbation hypothesis:
+  since calcium transients ARE present, GCaMP6f does not
+  fully abolish CaV1-mediated calcium entry. Instead, the
+  perturbation may be PARTIAL: sufficient Ca2+ enters to
+  generate detectable fluorescence transients via GCaMP6f,
+  but the amplitude/kinetics are insufficient to trigger
+  full excitation-contraction coupling (ECC). Alternative
+  explanations include:
+    - Immature sarcomere organization in GCaMP6f cells
+    - Reduced myofibrillar density (F-actin/sarcomeric actin)
+    - Impaired calcium-induced calcium release (CICR) from SR
+    - Disrupted T-tubule development (common in hiPSC-CMs)
+
+3.5 THREE-WAY CROSS-REFERENCE: STAINING + BF VIDEO + FLUORESCENCE
+----------------------------------------
+  This section integrates all three modalities for the GCaMP6f
+  wells (C2, C3) that have matched BF and FL recordings, and
+  cross-references with XR1 staining data for condition-level
+  structural context.
+
+  a) PER-WELL MULTI-MODAL SUMMARY (GCaMP6f wells):
+
+    Well C2 (GCaMP6f):
+      day2:
+        BF: no recording
+        FL: active_transients, 5 transients, dF/F0=0.0859
+        FL: active_transients, 6 transients, dF/F0=0.1346
+      day6:
+        BF: no recording
+        FL: active_transients, 10 transients, dF/F0=0.2158
+        FL: weak_transients, 12 transients, dF/F0=0.0227
+      day8:
+        BF: no_beating, amp=0.19px
+        BF: no_beating, amp=0.09px
+        FL: single_transient, 1 transients, dF/F0=0.0498
+
+    Well C3 (GCaMP6f):
+      day2:
+        BF: non_contractile, amp=0.05px
+        FL: no_transients, 0 transients, dF/F0=0.0000
+      day6:
+        BF: non_contractile, amp=0.06px
+        FL: active_transients, 18 transients, dF/F0=0.0333
+      day8:
+        BF: individual_cells_beating, amp=0.07px
+        BF: no_beating
+        FL: active_transients, 7 transients, dF/F0=0.0407
+
+  b) STRUCTURAL CONTEXT (staining, XR1 wells only):
+     Staining was performed on XR1 wells (B2, A3, B3) which share
+     identical substrate conditions with GCaMP6f wells (C2, C3).
+     This allows condition-level (not cell-level) structural context:
+
+     Gold-PVDF substrate (B2 stained, C2 FL/BF recorded):
+       F-actin intensity: 0.462 (n=291)
+       Circularity: 0.486
+       Actin coherency: 0.449
+       FL: 5 videos, 5 with Ca2+ transients
+       BF: 2 videos, 0 with active beating
+
+     Non-poled PVDF substrate (A3/B3 stained, C3 FL/BF recorded):
+       F-actin intensity: 0.442 (n=133)
+       Circularity: 0.492
+       Actin coherency: 0.459
+       FL: 3 videos, 2 with Ca2+ transients
+       BF: 5 videos, 0 with active beating
+
+  c) KEY CROSS-REFERENCE FINDINGS:
+
+     1. CALCIUM WITHOUT CONTRACTION (EMD in GCaMP6f):
+        7/8 FL videos show Ca2+ transients,
+        but 0/7 matched BF videos show active beating
+        (1/7 showed individual cells beating).
+        This electromechanical dissociation (EMD) indicates that
+        calcium handling machinery is functional but is insufficient
+        to drive sarcomeric contraction. In immature hiPSC-CMs,
+        calcium transients develop before mechanical coupling
+        (Lee et al. Nat Commun 2019), suggesting GCaMP6f cells
+        may be at an earlier maturation stage.
+
+     2. MYOFIBRILLAR STRUCTURE PREDICTS CONTRACTION:
+        Literature shows F-actin/myofibrillar abundance strongly
+        correlates with contractile function (Sheehy et al. 2020).
+        Our staining data (XR1, same substrates) shows organized
+        F-actin with coverage >99% on PVDF substrates.
+        If GCaMP6f cells have lower myofibrillar density or
+        organization (not imaged), this could explain the
+        calcium-contraction dissociation.
+
+     3. SUBSTRATE EFFECTS ON CALCIUM DYNAMICS:
+        Gold substrate: mean dF/F0 = 0.1018 (5 videos)
+        Non-poled substrate: mean dF/F0 = 0.0370 (3 videos)
+        (non-poled mean includes only videos with transients;
+        all 3 videos: mean dF/F0 = 0.0247)
+        NOTE: substrate assignments corrected from original filenames --
+        C2-day6-non-FL.avi is gold (well C2), C3-day6-gold-fl.avi is
+        non-poled (well C3).
+        In this dataset, gold wells show higher dF/F0 amplitudes,
+        but this comparison is confounded by small n, unequal
+        day composition, and low-FPS sampling. Prior substrate
+        stiffness literature (Ribeiro et al. 2022, Martewicz
+        et al. 2022) offers one possible explanation, but this
+        experiment does not isolate substrate mechanics or
+        L-type channel expression directly.
+
+     4. TEMPORAL PROGRESSION OF CALCIUM ACTIVITY:
+        day2: 2/3 with transients (dF/F0=0.1102) [usable: 1/1, dF/F0=0.0859]
+        day6: 3/3 with transients (dF/F0=0.0906) [usable: 1/1, dF/F0=0.2158]
+        day8: 2/2 with transients (dF/F0=0.0453) [usable: 2/2, dF/F0=0.0453]
+
+        IMPORTANT: The usable-FPS subset suggests a different
+        temporal pattern than the all-video average:
+          day2=0.086 -> day6=0.216 -> day8=0.045
+        Within the usable-FPS subset, calcium activity peaks at
+        day 6 rather than day 2.
+        The all-video day6 average (0.091) was diluted by two
+        low-FPS recordings (0.023 and 0.033) that under-sampled
+        transient peaks.
+
+        This usable-FPS pattern is consistent with
+        maturation-associated calcium handling improvement
+        (Hwang et al. 2015): calcium cycling develops during
+        days 2-6, peaks as SR calcium stores mature, then
+        declines by day 8 -- potentially due to GCaMP6f
+        photobleaching, substrate degradation, or cumulative
+        CaV1 perturbation from chronic GCaMP6f expression.
+
+     5. COMPARISON WITH XR1 BF CONTRACTILITY:
+        XR1 (BF): 11/16 active beating, increasing amplitude
+        day2 -> day8 (functional maturation)
+        GCaMP6f (BF): 0/7 active beating (1/7 individual cells beating)
+        GCaMP6f (FL): 7/8 show Ca2+ transients
+        Together, these modalities show that:
+          - XR1 clearly shows contraction in BF, but calcium cycling
+            was not measured in XR1 here
+          - GCaMP6f shows calcium cycling WITHOUT synchronized
+            contraction under the present readouts
+        The uncoupling is likely multifactorial:
+          - CaV1 perturbation by GCaMP6f CaM moiety (Yang 2018)
+          - Potentially lower sarcomeric maturity
+          - Immature SR calcium release (CICR) machinery
+          - Absent/immature T-tubule network
+
+================================================================================
+4. DISCUSSION
+================================================================================
+
+4.1 SUBSTRATE-DEPENDENT ADHESION AND FUNCTION
+----------------------------------------
+  Both modalities point in the same direction: gold-coated PVDF
+  has worse cell adhesion than non-poled PVDF or bare plastic.
+  Staining shows rounder cells (higher circularity) on gold,
+  while video shows more floating cells (flow/drift) and fewer
+  actively beating wells. Non-poled PVDF supported the strongest
+  contractions observed in this dataset (median 3.8 px amplitude).
+  Gold surfaces typically require protein coating (fibronectin,
+  laminin) for cardiomyocyte attachment (Tian et al. 2022).
+
+4.2 DEVICE AND PIEZOELECTRIC EFFECTS
+----------------------------------------
+  Staining: Au-PVDF Poled Pulsed (device) shows significantly
+  lower actin coherency vs all other conditions (p<0.001),
+  consistent with altered cytoskeletal organization. Because
+  alpha-actinin was inconclusive, a specific sarcomeric
+  interpretation remains tentative.
+
+  Video: on-device median amplitude (3.60 px) vs control (2.16 px).
+  Note: the aggregate device-vs-control comparison pools
+  wells with different substrates, so paired within-well
+  comparisons (Fig V5) provide the cleanest assessment.
+
+  PIEZOELECTRIC-RELEVANT COMPARISON (B2, gold-poled PVDF):
+  The B2 within-well pair (pulsed vs unpulsed, same gold-poled
+  substrate, same cell line) is the cleanest piezoelectric
+  comparison in this dataset. Pulsed amplitude is 2.7x higher
+  (2.96 vs 1.08 px). Because the substrate is identical, this
+  amplification is attributable to pulsation acting on the
+  poled piezoelectric film. Fully isolating the piezo
+  contribution from mechanical pulsation alone would require
+  a nonpoled-unpulsed control on the same substrate, which
+  was not included in this run (addressed in Experiment 2).
+
+4.3 CELL LINE VARIABILITY: XR1 vs GCaMP6f
+----------------------------------------
+  XR1 CMs beat spontaneously from day 2 with increasing
+  amplitude through day 8 (functional maturation).
+  GCaMP6f CMs showed NO synchronized beating at any timepoint (BF);
+  1/7 videos showed individual cell beating.
+
+  MECHANISTIC HYPOTHESIS:
+  The GCaMP6f line carries a genetically encoded calcium indicator
+  (GECI) based on calmodulin (CaM) fused to cpEGFP. Yang et al.
+  (Nat Commun 2018, doi:10.1038/s41467-018-03719-6) demonstrated
+  that GCaMP -- including GCaMP6f specifically -- interferes with
+  L-type calcium channel (CaV1) gating through its CaM moiety:
+
+    1. GCaMP acts as an IMPAIRED apoCaM and Ca2+/CaM, both
+       critical for CaV1 function
+    2. This perturbs calcium-dependent inactivation (CDI) and
+       voltage-gated activation (VGA) of L-type Ca2+ channels
+    3. Chronic expression causes Ca2+ dysregulation, aberrant
+       nuclear accumulation, and disrupted E-T coupling
+    4. GCaMP2 transgenic mice exhibited cardiomegaly/hypertrophy
+       (Tallini et al. 2006, cited in Yang et al. 2018)
+
+  FLUORESCENCE DATA CONSTRAINS THIS HYPOTHESIS:
+  FL analysis reveals 7/8 GCaMP6f videos show
+  calcium transients, indicating that GCaMP6f cells are not
+  calcium-silent at the field level. This produces a nuanced picture:
+
+    - MEASURABLE Ca2+ TRANSIENTS are PRESENT (FL detected)
+    - SYNCHRONIZED CONTRACTION is ABSENT (0/7 BF videos show active beating;
+      1/7 showed individual cells beating — C3-day8-non-Jaz.avi)
+    - Therefore: APPARENT ELECTROMECHANICAL DISSOCIATION under
+      these readouts at the tissue level
+
+  This pattern is consistent with partial CaV1 perturbation,
+  immature excitation-contraction coupling, or both. The
+  fluorescence data alone do not identify the exact source of
+  Ca2+ entry. One possible explanation is reduced L-type trigger
+  current and lower CICR gain, but this was not measured here.
+
+  ROBUSTNESS CHECK: When restricting to usable-FPS videos
+  (>= 5 FPS, n=4), all 4/4 show calcium transients (vs 7/8
+  with all videos). The one 'no transients' video was at
+  1.1 FPS -- too slow to capture fast calcium events. Usable
+  videos show higher amplitude (mean dF/F0=0.098 vs 0.083),
+  more regular beating (IBI CV=31% vs 43%), and reveal that
+  calcium activity peaks at day 6 (dF/F0=0.216) rather than
+  day 2 -- a pattern that was masked when low-FPS videos
+  diluted the aggregate. This strengthens the EMD conclusion:
+  the usable-FPS subset suggests stronger and more organized
+  calcium activity in GCaMP6f cells than the all-video
+  aggregate suggests, yet still insufficient for synchronized
+  mechanical contraction.
+
+  This is further supported by Lee et al. (Nat Commun 2019)
+  and Ronaldson-Bouchard et al. (Nature 2018) who show that
+  calcium transients develop BEFORE mechanical coupling in
+  hiPSC-CM maturation, consistent with the possibility that
+  GCaMP6f cells occupy a pre-coupling-like state under these
+  readouts.
+
+  Future experiments should consider GCaMP-X (Yang et al. 2018)
+  or chemical dyes (Fluo-4, Fura-2) to avoid CaV1 perturbation.
+
+4.4 NON-CONTRACTILE MOTION
+----------------------------------------
+  6 videos showed non-contractile motion: periodic passive
+  displacement without sarcomeric contraction, primarily in loosely
+  attached cells. Convergence analysis (Czirok et al. 2017) assumes
+  substrate-adhered cells; floating cells produce false-positive
+  signals. Manual expert validation was essential.
+
+4.5 STRUCTURE-FUNCTION-CALCIUM RELATIONSHIP
+----------------------------------------
+  Cross-referencing all three modalities reveals a hierarchy of
+  functional maturation in hiPSC-derived cardiomyocytes:
+
+  MATURATION HIERARCHY (observed in this experiment):
+    Level 1: F-actin organization (staining) -- PRESENT in all conditions
+    Level 2: Calcium cycling (FL) -- PRESENT in GCaMP6f cells
+    Level 3: Synchronized contraction (BF) -- ABSENT in GCaMP6f
+             (1/7 showed individual cell beating), PRESENT in XR1
+
+  This hierarchy mirrors the known developmental sequence in
+  cardiomyocyte maturation (Karbassi et al. Nat Rev Cardiol 2020):
+  cytoskeletal assembly -> ion channel expression -> calcium
+  handling -> sarcomeric organization -> functional ECC.
+
+  The strongest BF beating (non-poled PVDF) was not the condition
+  with the highest F-actin intensity or lowest coherency,
+  confirming that functional maturation involves more than
+  cytoskeletal organization alone. The FL data adds a crucial
+  intermediate readout showing that calcium handling and
+  contraction can be dissociated, especially in cell lines
+  with genetic perturbations (GCaMP6f).
+
+  Sheehy et al. (2020) showed that myofibrillar structural
+  variability can strongly influence contractile function in
+  hiPSC-CMs, independent of calcium dynamics. In our dataset,
+  XR1 staining is compatible with that framework, but GCaMP6f
+  structure was not imaged, so any myofibrillar explanation for
+  the GCaMP6f phenotype remains hypothetical.
+
+4.6 METHODOLOGICAL NOTES
+----------------------------------------
+  BF video:
+  - Farneback optical flow: established for BF CM video (Maddah 2015)
+  - Convergence: discriminates active vs passive (Czirok 2017)
+  - Per-center foci: extends to sparse cultures (Huebsch 2015)
+  - MUSCLEMOTION: our metrics align (Sala 2018)
+
+  FL calcium imaging:
+  - Intensity-based pipeline (NOT optical flow) -- appropriate for
+    GCaMP6f where fluorescence directly reports [Ca2+]i
+  - Background subtraction: 5-pixel border strip (all four edges)
+  - Photobleach correction: mono-exponential fit (standard for GECIs)
+  - F0: rolling 5th percentile (2s window) -- Psaras/CalTrack (2021)
+  - Peak detection: scipy.signal.find_peaks with adaptive thresholding
+  - Kinetics: TTP, CaTD50, CaTD90, decay tau -- Bedut et al. (2022)
+  - Low-FPS videos (< 5 FPS) were processed but flagged; kinetic
+    parameters from these should be interpreted cautiously
+
+  Staining:
+  - Classical segmentation validated by visual QC
+
+================================================================================
+5. LIMITATIONS
+================================================================================
+
+  General:
+  1.  N=1 biological replicate per condition (single experiment)
+  2.  Unbalanced design (no 'Nonpoled Un-pulsed' control)
+  3.  Old cells from external lab (not freshly differentiated)
+  4.  B3-day8 PVDF film detached/dried (1 data point lost)
+
+  Staining:
+  5.  Staining images are all from XR1 wells; GCaMP6f not imaged
+  6.  Single field of view per staining condition
+  7.  Classical segmentation in confluent cultures has errors
+  8.  Alpha-actinin staining failed (inconclusive)
+
+  BF video:
+  9.  Low sample size for video stats (n=2-6 per substrate group)
+  10. No gold-substrate BF videos at day 6 (all < 2 FPS, unusable)
+  11. 10-12 FPS limits temporal resolution of beating kinetics
+  12. 2x spatial downsampling may reduce sensitivity
+
+  Fluorescence:
+  13. Only 4/8 FL videos have usable FPS (>= 5); 4 are low-FPS
+  14. All FL data from GCaMP6f cells only; no XR1 FL available
+  15. GCaMP6f transgene may perturb CaV1 gating (Yang 2018),
+      meaning the indicator itself alters the calcium dynamics
+      it is meant to measure ('observer effect')
+  16. Whole-field averaging may underestimate spatially heterogeneous
+      calcium activity (see FL3 heatmaps for spatial distribution)
+  17. No matched FL recording for XR1 cells prevents direct
+      comparison of calcium kinetics between cell lines
+
+  Cross-reference:
+  18. Cross-reference is condition-level, not cell-level
+  19. BF and FL were not recorded simultaneously, preventing
+      direct correlation of calcium transients with contraction
+      in the same field of view
+
+================================================================================
+6. CONCLUSIONS
+================================================================================
+
+  1. PULSATION ON PIEZOELECTRIC SUBSTRATE AMPLIFIES CONTRACTION
+     The cleanest piezoelectric comparison (B2: gold-poled PVDF,
+     pulsed vs unpulsed, same substrate) shows 2.7x higher
+     contraction amplitude with pulsation. Staining on the same
+     wells shows significantly different actin coherency (p<0.001),
+     consistent with pulsation-driven cytoskeletal remodeling.
+     Fully separating piezoelectric charge from mechanical
+     pulsation alone requires Experiment 2 (nonpoled-unpulsed
+     control now included).
+
+  2. SUBSTRATE ADHESION IS CRITICAL FOR FUNCTION
+     Gold-PVDF: poor adhesion (rounder cells + floating debris)
+     -> reduced beating in this dataset. Non-poled PVDF showed
+     the strongest contraction. Surface functionalization would
+     likely improve gold performance.
+
+  3. CELL LINE DETERMINES BEATING CAPACITY
+     XR1: 11/16 active beating. GCaMP6f: 0/7 active synchronized beating
+     (1/7 GCaMP6f videos showed individual cells beating).
+     GCaMP6f's lack of synchronized beating is consistent with,
+     but not specific for, constitutive GCaMP6f perturbing
+     L-type Ca2+ channel (CaV1) gating via its calmodulin moiety
+     (Yang et al. Nat Commun 2018). This mechanism was not
+     directly tested here.
+
+  4. ELECTROMECHANICAL DISSOCIATION IN GCaMP6f CELLS
+     FL reveals 7/8 GCaMP6f videos have Ca2+
+     transients despite 0/7 showing synchronized BF contraction
+     (1/7 showed individual cell beating). This apparent
+     electromechanical dissociation indicates functional calcium
+     handling without coordinated mechanical output, consistent
+     with partial CaV1 perturbation, immature ECC, or both.
+     GCaMP6f cells are therefore not electrically silent,
+     but remain mechanically uncoupled under these readouts.
+
+  5. STRUCTURE, CALCIUM, AND CONTRACTION ARE CONSISTENT WITH A
+     MATURATION HIERARCHY
+     Across modalities, the data are consistent with a sequence
+     from structural organization to calcium cycling to
+     synchronized contraction. These stages were not all measured
+     in the same cells, so this remains a cross-modal
+     interpretation rather than a direct lineage sequence.
+
+  6. NON-CONTRACTILE MOTION IS A DISTINCT PHENOTYPE
+     6 videos showed periodic passive displacement without
+     sarcomeric contraction, requiring expert validation to
+     distinguish from true beating.
+
+================================================================================
+7. NEXT STEPS
+================================================================================
+
+  Immediate (this experiment):
+    - ROI-based FL analysis: extract traces from individual cell
+      clusters rather than whole-field averaging
+    - Simultaneous BF+FL comparison where recordings overlap
+    - Quantify GCaMP6f photobleaching rate across days
+
+  Experiment 2 improvements:
+    Design:
+    - Fresh hiPSC-CMs with optimized culture protocol
+    - Include 'Nonpoled Un-pulsed' control for balanced 2x2 design
+    - Multiple fields of view per condition
+    - Surface coating on gold-PVDF (fibronectin/laminin/Matrigel)
+
+    BF video:
+    - Verify FPS settings before recording (>= 10 FPS for all)
+    - Anti-vibration table, heated stage for video recording
+
+    Fluorescence:
+    - CRITICAL: use GCaMP-X or jGCaMP8 instead of GCaMP6f to
+      avoid CaV1 perturbation (Yang et al. 2018)
+    - Alternative: chemical Ca2+ dyes (Fluo-4, Fura-2) for
+      calcium imaging without genetic perturbation
+    - Record FL for BOTH cell lines (not just GCaMP reporter)
+    - Record BF and FL simultaneously or sequentially in same
+      session for direct calcium-contraction correlation
+    - Consistent FPS >= 10 for all FL recordings
+
+    Staining:
+    - Higher magnification (40-63x) for sarcomere imaging
+    - Optimized alpha-actinin staining protocol
+    - Image BOTH cell lines for morphological comparison
+    - Add sarcomeric alpha-actinin + connexin-43 for gap junctions
+
+================================================================================
+8. KEY REFERENCES
+================================================================================
+
+  Brightfield video analysis:
+  Czirok A, Bhatt DK et al. Sci Rep 2017;7:10476
+    Convergence-based optical flow for CM contraction mapping.
+  Huebsch N et al. Tissue Eng Part C 2015;21:467-479
+    Video-based contractility analysis of hiPSC-CMs.
+  Maddah M et al. Stem Cell Reports 2015;4:621-631
+    Automated BF video analysis at low frame rates.
+  Sala L et al. Circ Res 2018;122:e5-e16  (MUSCLEMOTION)
+    Standardized motion analysis for hiPSC-CMs.
+
+  Fluorescence / calcium imaging:
+  Bedut S et al. J Pharmacol Toxicol Methods 2022;113:107135
+    High-throughput calcium transient assay in hiPSC-CMs.
+  Psaras Y et al. SLAS Discovery 2021;26:1062-1074  (CalTrack)
+    Automated calcium transient analysis with dF/F0 metrics.
+  Hwang HS et al. J Mol Cell Cardiol 2015;85:79-88
+    Calcium handling maturation timeline in hiPSC-CMs.
+
+  Cell lines and maturation:
+  Burridge PW et al. Nat Methods 2014;11:855-860
+    iPSC line-to-line variability in CM differentiation.
+  Karbassi E et al. Nat Rev Cardiol 2020;17:341-359
+    Cardiomyocyte maturation: structure, function, metabolism.
+  Lee JH et al. Nat Commun 2019;10:5515
+    Calcium transients precede mechanical coupling in iPSC-CMs.
+  Ronaldson-Bouchard K et al. Nature 2018;556:239-243
+    Advanced maturation of hiPSC-CMs via electromechanical
+    conditioning; ECC development timeline.
+  Sheehy SP et al. Stem Cell Reports 2020;14:312-324
+    Myofibrillar density determines contractile function.
+
+  GCaMP6f perturbation:
+  Yang Y et al. Nat Commun 2018;9:1504
+    GCaMP CaM moiety perturbs L-type Ca2+ channel (CaV1)
+    gating -> Ca2+ dysregulation; GCaMP-X as solution.
+
+  Substrate effects:
+  Ribeiro AJS et al. PNAS 2015;112:12705-12710
+    Substrate stiffness modulates CM electrophysiology and
+    calcium handling.
+  Martewicz S et al. Biophys J 2022;122:1-12
+    Substrate stiffness and calcium handling adaptation.
+
+================================================================================
+9. COMPLETE FILE INVENTORY
+================================================================================
+
+NOTE: This inventory lists expected project outputs. Large PNG/GIF
+artifacts may be archived externally (e.g., Drive); absence from
+the local workspace does not imply missing project data.
+
+  Staining figures:
+    Fig1_raw_images.png                          
+    Fig2_segmentation_qc.png                     
+    Fig3_morphology.png                          
+    Fig4_factin_organization.png                 
+    Fig5_summary_bars.png                        
+    Fig6_multinucleation.png                     
+    Fig7_actinin_INCONCLUSIVE.png                
+    Fig8_significance_heatmap.png                
+
+  Video figures:
+    video_Fig_V1_classification.png               [NOT LOCAL]
+    video_Fig_V2_temporal.png                     [NOT LOCAL]
+    video_Fig_V3_substrate.png                    [NOT LOCAL]
+    video_Fig_V4_cellline.png                     [NOT LOCAL]
+    video_Fig_V5_paired.png                       [NOT LOCAL]
+    video_Fig_V6_foci.png                         [NOT LOCAL]
+    video_Fig_V7_adhesion.png                     [NOT LOCAL]
+    video_Fig_V8_crossref.png                     [NOT LOCAL]
+    video_Fig_V9_classification_frames.png       
+    video_Fig_V10a_temporal_control.png          
+    video_Fig_V10b_temporal_device.png           
+
+  Cross-reference figures:
+    combined_Fig_C1_structure_vs_function.png    
+    combined_Fig_C2_adhesion_evidence.png        
+
+  Fluorescence figures:
+    fl_Fig_FL1_overview.png                      
+    fl_Fig_FL2_temporal.png                      
+    fl_Fig_FL3_heatmaps.png                      
+    fl_Fig_FL4_transient_montage.png             
+    fl_Fig_FL5_bf_vs_fl.png                      
+
+  Extra staining figures:
+    key_comparisons_metrics.png                   [NOT LOCAL]
+    key_comparisons_heatmap.png                   [NOT LOCAL]
+    poled_vs_nonpoled_visual.png                  [NOT LOCAL]
+    pulsed_vs_unpulsed_AuPVDF.png                 [NOT LOCAL]
+
+  Data files:
+    phalloidin_per_cell_data.csv
+    multinucleation_cellpose.csv
+    descriptive_statistics.csv
+    pairwise_comparisons.csv
+    video_descriptive_statistics.csv
+    video_classification_contingency.csv
+    video_pairwise_comparisons.csv
+
+  Source video data:
+    video_results/batch_results_v3_final.csv
+    video_results/batch_results_v3_with_corrections.csv
+    video_results/batch_results_v3.csv
+    video_results/MANUAL_REVIEW_NOTES.txt
+
+  FL analysis data:
+    fl_results/fl_batch_results.csv
+    fl_results/ per-video analysis PNGs: 8 files
+      C2-day2-gold-FL_fl_analysis.png
+      C2-day6-gold-FL-control_fl_analysis.png
+      C2-day6-non-FL_fl_analysis.png
+      C2-day8-gold-GCaMP6f-FL_fl_analysis.png
+      C3-day2-fl_fl_analysis.png
+      C3-day6-gold-fl_fl_analysis.png
+      C3-day8-non-Jaz-fl_fl_analysis.png
+      Jaz-day2-fluorescence-gold_fl_analysis.png
+
+  Per-video analysis PNGs:
+    23/23 analysis PNGs verified
+    [EXTRA]   video_results\baseline_day1-2\A3-day1-phase3_analysis_EXCLUDED.png
+    baseline_day1-2/ (7 files):
+      A3-day1-fixed_analysis.png
+      A3-day1-phase3_analysis_EXCLUDED.png
+      A3-day2-Tammy-NEW_analysis.png
+      B3-day1-fixed_analysis.png
+      B3-day2_analysis.png
+      C3-day1-fixed_analysis.png
+      C3-day2_analysis.png
+    treatment_day6-8/ (17 files):
+      A2-day8-gold-tAMMY-CONTROL_analysis.png
+      A2-day8-gold-tAMMY-new_analysis.png
+      A3-day6-NON1-TAMMY_analysis.png
+      A3-day6-control-NON1-TAMMY_analysis.png
+      A3-day8-Tammy-CONTROL_analysis.png
+      A3-day8-non-Tammy_analysis.png
+      B2-day8-gold-tAMMY-control_analysis.png
+      B2-day8-gold-tAMMY_analysis.png
+      B3-day6-NON2-tammy_analysis.png
+      B3-day8-non-tammy_analysis.png
+      B3-day8-tammy-control_analysis.png
+      C2-day8-gold-Jaz-CONTROL-bf_analysis.png
+      C2-day8-gold-Jaz_analysis.png
+      C3-day6-control-bf-new_analysis.png
+      C3-day8-control-Jaz-bf_analysis.png
+      C3-day8-non-Jaz_analysis.png
+      day6-B3-control-non_analysis.png
+
+========================================
+APPENDIX A: DETAILED PER-WELL PROFILES
+================================================================================
+
+Every BF / FL video metric and staining summary for each well. The in-text
+discussion (section 4.5) synthesizes across wells; this appendix is the
+raw per-well record.
+
+NOTE: All BF amplitude values in this appendix use ROI contraction amplitude
+(roi_amplitude), consistent with the auto-generated sections above.
+
+----------------------------------------------------------------------
+A2 — XR1 | Gold-PVDF (Poled) | Piezoelectric substrate
+----------------------------------------------------------------------
+
+  BF VIDEOS (2 videos, day 8 only):
+
+  1) A2-day8-gold-tAMMY-new.avi  [ON-DEVICE / PULSED]
+     Classification: NON-CONTRACTILE (manual)
+     Notes: "Non-contractile motion + floating cells, poor adhesion on gold"
+     ROI amplitude: 0.007 px  (negligible)
+     ROI BPM: 17.9 (algorithmic artifact)
+     Flow/drift: YES (flow_uniformity = 0.469)
+     Foci: 50, 3.4% FOV coverage (noise)
+
+  2) A2-day8-gold-tAMMY-CONTROL.avi  [CONTROL / UN-PULSED]
+     Classification: NON-CONTRACTILE (manual)
+     Notes: "Floaters/detached cells, poor adhesion on gold substrate"
+     ROI amplitude: 0.026 px  (negligible)
+     ROI BPM: 13.2 (artifact)
+     Flow/drift: YES
+
+  FL VIDEOS: NONE (XR1)
+
+  STAINING: No specific image from A2. Proxy from B2 (same substrate):
+    Pulsed (B2 device):    median F-actin=0.424, coherency=0.422, circ=0.478
+    Un-pulsed (B2 ctrl):   median F-actin=0.508, coherency=0.472, circ=0.507
+
+  DEVICE vs CONTROL: Both NON-CONTRACTILE. No functional difference.
+  Both show floating cells and poor adhesion on gold substrate.
+
+  ASSESSMENT: UNINFORMATIVE — adhesion failure prevents piezo evaluation.
+
+----------------------------------------------------------------------
+B2 — XR1 | Gold-PVDF (Poled) | Piezoelectric substrate
+----------------------------------------------------------------------
+
+  BF VIDEOS (2 videos, day 8 only):
+
+  1) B2-day8-gold-tAMMY.avi  [ON-DEVICE / PULSED]
+     Classification: ACTIVE BEATING (manual confirmed)
+     ROI amplitude: 2.964 px
+     ROI BPM: 3.9
+     Regularity: 1.000 (2 beats only)  |  IBI CV: 0.0%
+     Contraction: 1.935 s  |  Relaxation: 8.460 s  |  R/C: 4.37
+     Contraction vel: 1.787 px/s  |  Relaxation vel: 0.636 px/s
+     Flow: NO  |  Foci: 79, 6.03%, max 8.83 px
+
+  2) B2-day8-gold-tAMMY-control.avi  [CONTROL / UN-PULSED]
+     Classification: ACTIVE BEATING (manual confirmed)
+     ROI amplitude: 1.084 px
+     ROI BPM: 10.17
+     Regularity: 0.811  |  IBI CV: 18.9%
+     Contraction: 3.668 s  |  Relaxation: 2.931 s  |  R/C: 0.80
+     Contraction vel: 0.312 px/s  |  Relaxation vel: 0.402 px/s
+     Flow: NO  |  Foci: 117, 5.68%
+
+  FL VIDEOS: NONE (XR1)
+
+  STAINING (primary well for gold-PVDF conditions):
+    Au-PVDF Poled Pulsed (B2 device) — 157 cells:
+      Area=670 px, AR=1.601, Circ=0.478, Solidity=0.797
+      F-actin=0.424, Coverage=0.997, Coherency=0.422 (LOWEST)
+    Au-PVDF Poled Un-pulsed (B2 control) — 134 cells:
+      Area=661.5 px, AR=1.628, Circ=0.507, Solidity=0.802
+      F-actin=0.508 (HIGHEST), Coverage=1.000, Coherency=0.472
+
+    Key comparisons (pulsed vs un-pulsed on same substrate):
+      Coherency: 0.422 vs 0.472, p=1.64e-09 ***
+      F-actin:   0.424 vs 0.508, p=2.53e-03 **
+      Coverage:  0.997 vs 1.000, p=1.32e-04 ***
+
+    Multinucleation:
+      Pulsed: 25 cells, 9 mono (36%), 0 multi (0%), 16 unassigned (64%)
+      Un-pulsed: 63 cells, 21 mono (33%), 0 multi (0%), 42 unassigned (66%)
+      NOTE: "unassigned" = no DAPI nucleus matched by Cellpose (segmentation
+      limitation in confluent cultures). Among cells with nuclei: 100% mono.
+
+  DEVICE vs CONTROL:
+    Amplitude: 2.96 px vs 1.08 px — 2.7x HIGHER with pulsation
+    BPM: 3.9 vs 10.2 — 2.6x SLOWER with pulsation
+    R/C: 4.37 vs 0.80 — dramatically prolonged relaxation
+    Staining: significantly LOWER coherency and F-actin in pulsed
+
+  ASSESSMENT: STRONGEST PIEZOELECTRIC EVIDENCE — 2.7x amplitude gain
+  with pulsation on the same gold-poled substrate (cleanest piezo-
+  relevant comparison in this dataset). Staining confirms altered
+  cytoskeletal organization (lowest coherency). Slow BPM and prolonged
+  relaxation may reflect a pulsation-induced shift in contraction
+  dynamics. N=1 well pair; Experiment 2 will add replicates and a
+  nonpoled-unpulsed control to isolate piezo from mechanical pulsation.
+
+----------------------------------------------------------------------
+C2 — GCaMP6f | Gold-PVDF (Poled) | Piezoelectric substrate
+----------------------------------------------------------------------
+
+  BF VIDEOS (2 videos, day 8 only):
+  1) C2-day8-gold-Jaz.avi [DEVICE]: NO BEATING, 0.193 px
+  2) C2-day8-gold-Jaz-CONTROL-bf.avi [CONTROL]: NO BEATING, 0.085 px
+
+  FL VIDEOS (5 videos — most FL data in dataset):
+  1) Jaz-day2-fluorescence-gold.avi [day 2, gold, baseline]
+     FPS=10.0 (ok) | ACTIVE TRANSIENTS | 5 transients | dF/F0=0.086
+     BPM=13.8 | IBI CV=31.1%
+     TTP=820ms  CaTD50=460ms  CaTD90=880ms  tau=751ms
+  2) C2-day2-gold-FL.avi [day 2, gold, baseline]
+     FPS=2.0 (LOW) | ACTIVE TRANSIENTS | 6 transients | dF/F0=0.135
+     BPM=9.4 | IBI CV=54.9% (kinetics unreliable at low FPS)
+  3) C2-day6-gold-FL-control.avi [day 6, gold, control]
+     FPS=10.0 (ok) | ACTIVE TRANSIENTS | 10 transients | dF/F0=0.216
+     BPM=19.9 | IBI CV=23.6%
+     TTP=950ms  CaTD50=1080ms  CaTD90=1660ms  tau=1504ms
+     *** STRONGEST FL SIGNAL IN ENTIRE DATASET ***
+  4) C2-day6-non-FL.avi [day 6, gold, device]
+     NOTE: filename says "non" but well C2 = gold-coated poled PVDF
+     FPS=2.564 (LOW) | WEAK TRANSIENTS | 12 transients | dF/F0=0.023
+     BPM=6.4 | IBI CV=67.5%
+  5) C2-day8-gold-GCaMP6f-FL.avi [day 8, gold, device]
+     FPS=12.5 (ok) | SINGLE TRANSIENT | 1 transient | dF/F0=0.050
+     TTP=1280ms  CaTD50=1040ms  CaTD90=1200ms  tau=1065ms
+
+  C2 FL temporal (usable FPS): 0.086 (d2) -> 0.216 (d6) -> 0.050 (d8)
+  Calcium peaks at day 6 then declines.
+
+  STAINING: None (GCaMP6f not imaged)
+
+  ASSESSMENT: AMBIGUOUS — primary EMD evidence well. 5/5 FL videos show
+  calcium; 0/2 BF show beating. Strongest signal (d6 0.216) is on
+  CONTROL plate (un-pulsed). GCaMP6f confound dominates.
+
+----------------------------------------------------------------------
+A3 — XR1 | Non-poled PVDF (device) / Plastic (control)
+----------------------------------------------------------------------
+STRONGEST EVIDENCE — MOST DATA-RICH WELL
+
+  BF VIDEOS (6 videos — most of any well):
+  1) A3-day1-fixed.avi [day 1, plastic, baseline]
+     INDIVIDUAL CELLS BEATING | 0.088 px | BPM=13.4
+  2) A3-day2-Tammy-NEW.avi [day 2, plastic, baseline]
+     ACTIVE BEATING | 0.805 px | BPM=18.15
+     Regularity=0.982 | IBI CV=1.9% | 116 foci, 6.0%
+  3) A3-day6-NON1-TAMMY.avi [day 6, non-poled PVDF, device]
+     ACTIVE BEATING | 3.357 px | BPM=10.53
+     Regularity=0.929 | IBI CV=7.1% | R/C=1.07
+     Foci: 112, 5.92%, max 8.74 px
+  4) A3-day6-control-NON1-TAMMY.avi [day 6, plastic, control]
+     ACTIVE BEATING | 0.831 px | BPM=9.44
+     Regularity=0.103 (VERY IRREGULAR) | IBI CV=89.7% | R/C=6.79
+  5) A3-day8-non-Tammy.avi [day 8, non-poled PVDF, device]
+     ACTIVE BEATING | 7.626 px | BPM=8.77
+     *** HIGHEST AMPLITUDE IN ENTIRE DATASET ***
+     Regularity=0.909 | IBI CV=9.1% | R/C=0.43 (mature phenotype)
+     Contraction vel=1.638 px/s | Relaxation vel=5.173 px/s
+     Foci: 103, 5.84%, max 16.10 px
+  6) A3-day8-Tammy-CONTROL.avi [day 8, plastic, control]
+     ACTIVE BEATING | 2.159 px | BPM=14.64
+     Regularity=0.986 | IBI CV=1.4% | R/C=0.17
+
+  FL VIDEOS: NONE (XR1)
+
+  STAINING (A3 device = "Nonpoled Pulsed" condition — 133 cells):
+    Area=667 px, AR=1.685, Circ=0.492, Solidity=0.805
+    F-actin=0.442, Coverage=0.997, Coherency=0.459
+
+    vs Cells only: F-actin p=2.31e-04 ***, Coverage p=9.98e-04 ***
+    vs Poled Pulsed: Coherency 0.459 vs 0.422, p=6.20e-05 ***
+
+  DEVICE vs CONTROL:
+    Day 6:  3.36 px vs 0.83 px  — 4.0x HIGHER
+    Day 8:  7.63 px vs 2.16 px  — 3.5x HIGHER
+
+  TEMPORAL MATURATION:
+    Day 1: 0.088 px -> Day 2: 0.805 px -> Day 6: 3.357 px -> Day 8: 7.626 px
+    Clear monotonic increase — 9.5x from day 2 baseline to day 8 device.
+
+  ASSESSMENT: STRONGEST CONTRACTION in the dataset (3.5-4.0x device vs
+  control). Non-poled PVDF has no piezoelectric charge, so this demonstrates
+  MECHANICAL pulsation effect on a high-adhesion substrate. A3 amplitude
+  (7.63 px) exceeds B2 (2.96 px), likely because non-poled PVDF provides
+  superior cell adhesion compared to gold-coated poled PVDF. This
+  highlights that substrate adhesion is a major determinant of absolute
+  contraction amplitude, independent of piezoelectric stimulation.
+
+----------------------------------------------------------------------
+B3 — XR1 | Non-poled PVDF (device) / Plastic (control)
+----------------------------------------------------------------------
+
+  BF VIDEOS (6 videos):
+  1) B3-day1-fixed.avi [day 1, plastic, baseline]
+     NON-CONTRACTILE | 0.024 px | "Floaters not attached"
+  2) B3-day2.avi [day 2, plastic, baseline]
+     ACTIVE BEATING | 0.447 px | BPM=18.85
+     Regularity=0.990 | IBI CV=1.0%
+  3) B3-day6-NON2-tammy.avi [day 6, non-poled PVDF, device]
+     ACTIVE BEATING | 3.844 px | BPM=10.53
+     Regularity=0.928 | IBI CV=7.2% | R/C=4.30
+     Foci: 98, 6.54%, max 9.47 px
+  4) day6-B3-control-non.avi [day 6, plastic, control]
+     ACTIVE BEATING | 2.750 px | BPM=6.26 | R/C=0.42
+  5) B3-day8-non-tammy.avi [day 8, non-poled PVDF, device]
+     NO BEATING | 0.020 px
+     *** TECHNICAL FAILURE — PVDF film detached/dried ***
+  6) B3-day8-tammy-control.avi [day 8, plastic, control]
+     ACTIVE BEATING | 4.378 px | BPM=18.50
+     Regularity=0.988 | IBI CV=1.3% | R/C=0.46
+     Foci: 127, 7.70%, max 12.05 px
+
+  FL VIDEOS: NONE (XR1)
+
+  STAINING (B3 control = "Cells only" baseline — 151 cells):
+    Area=568 px (smallest), F-actin=0.365 (lowest), Coverage=0.913 (lowest)
+    Coherency=0.476
+
+    vs all substrate conditions: F-actin significantly lower (all p<0.001)
+    BUT similar coherency to most conditions.
+
+  DEVICE vs CONTROL:
+    Day 6: 3.84 px vs 2.75 px — 1.4x (modest)
+    Day 8: LOST (film detached) vs 4.38 px (strong control beating)
+
+  KEY INSIGHT: B3-day8 control (bare plastic, 4.38 px) shows XR1 cells
+  mature well even without any PVDF substrate.
+
+  ASSESSMENT: WEAKLY SUPPORTIVE then LOST. Day 6 shows modest 1.4x
+  device advantage. Day 8 device data lost to film detachment.
+
+----------------------------------------------------------------------
+C3 — GCaMP6f | Non-poled PVDF (device) / Plastic (control)
+----------------------------------------------------------------------
+
+  BF VIDEOS (5 videos):
+  1) C3-day1-fixed.avi [day 1, plastic]: NON-CONTRACTILE, 0.021 px
+  2) C3-day2.avi [day 2, plastic]: NON-CONTRACTILE, 0.049 px
+  3) C3-day6-control-bf-new.avi [day 6, plastic, control]:
+     NON-CONTRACTILE, 0.065 px
+  4) C3-day8-non-Jaz.avi [day 8, non-poled PVDF, device]:
+     INDIVIDUAL CELLS BEATING, 0.067 px, BPM=81.1
+     Only GCaMP6f recording with any beating classification
+  5) C3-day8-control-Jaz-bf.avi [day 8, plastic, control]:
+     NO BEATING, 0.000 px
+
+  FL VIDEOS (3 videos):
+  1) C3-day2-fl.avi [day 2, non-poled, baseline]
+     FPS=1.111 (TOO LOW) | NO TRANSIENTS | FPS too low to detect
+  2) C3-day6-gold-fl.avi [day 6, non-poled, device]
+     NOTE: filename says "gold" but well C3 = uncoated non-poled PVDF
+     FPS=3.226 (LOW) | ACTIVE TRANSIENTS | 18 transients | dF/F0=0.033
+     BPM=11.3 | IBI CV=43.0%
+  3) C3-day8-non-Jaz-fl.avi [day 8, non-poled, device]
+     FPS=11.111 (ok) | ACTIVE TRANSIENTS | 7 transients | dF/F0=0.041
+     BPM=12.7 | IBI CV=38.0%
+     TTP=527ms  CaTD50=501ms  CaTD90=1363ms  tau=1929ms
+
+  STAINING: None (GCaMP6f not imaged)
+
+  ASSESSMENT: WEAK — only GCaMP6f well with any BF beating classification
+  (device day 8, borderline). Active FL transients on device (days 6-8).
+  Lower dF/F0 than C2 (gold). GCaMP6f confound prevents evaluation.

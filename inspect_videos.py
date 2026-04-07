@@ -92,8 +92,14 @@ def classify_video(filename):
     else:
         location = "unknown"
 
-    # Substrate
-    if "gold" in fn:
+    # Substrate — use well-based ground truth where filenames are misleading
+    SUBSTRATE_OVERRIDES = {
+        "c2-day6-non-fl.avi": "gold",      # filename says "non" but C2 = gold
+        "c3-day6-gold-fl.avi": "non",       # filename says "gold" but C3 = non-poled
+    }
+    if fn in SUBSTRATE_OVERRIDES:
+        substrate = SUBSTRATE_OVERRIDES[fn]
+    elif "gold" in fn:
         substrate = "gold"
     elif "non" in fn:
         substrate = "non"

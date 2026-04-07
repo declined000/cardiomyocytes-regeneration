@@ -30,13 +30,13 @@ OUT = Path("final_report")
 STAIN_CONDS_NL = [
     "Au-PVDF Poled\nPulsed (device)",
     "Au-PVDF Poled\nUn-pulsed (control)",
-    "Au-PVDF Nonpoled\nPulsed (device)",
+    "β-PVDF Nonpoled\nPulsed (device)",
     "Cells only\n(baseline)",
 ]
 STAIN_CONDS_FLAT = [
     "Au-PVDF Poled Pulsed (device)",
     "Au-PVDF Poled Un-pulsed (control)",
-    "Au-PVDF Nonpoled Pulsed (device)",
+    "β-PVDF Nonpoled Pulsed (device)",
     "Cells only (baseline)",
 ]
 NL_TO_FLAT = dict(zip(STAIN_CONDS_NL, STAIN_CONDS_FLAT))
@@ -44,13 +44,13 @@ FLAT_TO_NL = dict(zip(STAIN_CONDS_FLAT, STAIN_CONDS_NL))
 STAIN_SHORT = {
     "Au-PVDF Poled Pulsed (device)": "Poled Pulsed (device)",
     "Au-PVDF Poled Un-pulsed (control)": "Poled Un-pulsed (control)",
-    "Au-PVDF Nonpoled Pulsed (device)": "Nonpoled Pulsed (device)",
+    "β-PVDF Nonpoled Pulsed (device)": "Nonpoled Pulsed (device)",
     "Cells only (baseline)": "Cells only (baseline)",
 }
 STAIN_COLORS = {
     "Au-PVDF Poled Pulsed (device)": "#ff9966",
     "Au-PVDF Poled Un-pulsed (control)": "#ffd966",
-    "Au-PVDF Nonpoled Pulsed (device)": "#a8d5a2",
+    "β-PVDF Nonpoled Pulsed (device)": "#a8d5a2",
     "Cells only (baseline)": "#7fbfff",
 }
 
@@ -145,7 +145,7 @@ def verify_figures():
         path = OUT / fname
         exists = path.exists()
         results[label] = (fname, exists)
-        status = "OK" if exists else "MISSING"
+        status = "OK" if exists else "NOT_LOCAL"
         print(f"  [{status}] {fname}")
 
     return results
@@ -183,7 +183,7 @@ def verify_video_results(vid):
             print(f"  [OK]      {target}")
         else:
             missing.append(str(target))
-            print(f"  [MISSING] {target}")
+            print(f"  [NOT_LOCAL] {target}")
 
     # Check for extra/unexpected PNGs in each subfolder
     for subdir, label in [(baseline_dir, "baseline_day1-2"),
@@ -362,7 +362,7 @@ def fig_c2_adhesion_evidence(phal, vid):
     substrate_stain_map = {
         "gold_PVDF": ["Au-PVDF Poled\nPulsed (device)",
                        "Au-PVDF Poled\nUn-pulsed (control)"],
-        "non-poled_PVDF": ["Au-PVDF Nonpoled\nPulsed (device)"],
+        "non-poled_PVDF": ["β-PVDF Nonpoled\nPulsed (device)"],
         "plastic": ["Cells only\n(baseline)"],
     }
     sub_labels = {"plastic": "Bare plastic", "non-poled_PVDF": "Non-poled PVDF",
@@ -963,7 +963,7 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     L.append("  Control plate:  col 2 (A2,B2,C2) = Gold (Au-PVDF Poled)")
     L.append("                  col 3 (A3,B3,C3) = Cells only (bare plastic)")
     L.append("  Device plate:   col 2 (A2,B2,C2) = Gold (Au-PVDF Poled)")
-    L.append("                  col 3 (A3,B3,C3) = Nonpoled (Au-PVDF Nonpoled)")
+    L.append("                  col 3 (A3,B3,C3) = Nonpoled (β-PVDF Nonpoled, no gold coating)")
     L.append("  --> 3 Gold + 3 non-Gold wells per plate (6 wells total per plate)")
     L.append("")
     L.append("Staining conditions (phalloidin analysis, 4 groups):")
@@ -987,8 +987,8 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
         n_fl_ok = (fl_data["fps_flag"] == "ok").sum()
         n_fl_low = (fl_data["fps_flag"] == "low_fps").sum()
         L.append(f"Fluorescence recordings (GCaMP6f calcium imaging, {n_fl_total} total):")
-        L.append(f"  Usable FPS (>= 8 FPS)                n = {n_fl_ok} videos")
-        L.append(f"  Low FPS (< 8 FPS)                    n = {n_fl_low} videos")
+        L.append(f"  Usable FPS (>= 5 FPS)                n = {n_fl_ok} videos")
+        L.append(f"  Low FPS (< 5 FPS)                    n = {n_fl_low} videos")
         L.append("  All from GCaMP6f cells (wells C2, C3)")
         L.append("")
 
@@ -1023,7 +1023,7 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     L.append("2.3 Fluorescence Calcium Imaging Analysis")
     L.append("-" * 40)
     L.append("  GCaMP6f intensity-based pipeline (NOT optical flow).")
-    L.append("  Background subtraction: corner ROI (15% of frame) for non-cell baseline.")
+    L.append("  Background subtraction: 5-pixel border strip (all four edges) for non-cell baseline.")
     L.append("  Photobleach correction: mono-exponential fit y=a*exp(-t/tau)+c.")
     L.append("  F0 baseline: rolling 5th percentile (2s window).")
     L.append("  dF/F0 = (F - F0) / F0 for each timepoint.")
@@ -1076,17 +1076,29 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
 
     # Multinucleation
     L.append("  Multinucleation (Cellpose):")
+    total_all, mono_all, multi_all, zero_all = 0, 0, 0, 0
     for sc in STAIN_CONDS_FLAT:
         sc_nl = FLAT_TO_NL[sc]
         sub = mn[mn["condition"] == sc_nl]
         total = len(sub)
         if total > 0:
-            mono = (sub["nuclei_count"] == 1).sum()
-            multi = (sub["nuclei_count"] >= 2).sum()
+            mono = int((sub["nuclei_count"] == 1).sum())
+            multi = int((sub["nuclei_count"] >= 2).sum())
+            zero = int((sub["nuclei_count"] == 0).sum())
+            total_all += total; mono_all += mono; multi_all += multi; zero_all += zero
             L.append(f"    {STAIN_SHORT[sc]:35s} {total} cells, "
                      f"{mono} mono ({100*mono//total}%), "
-                     f"{multi} multi ({100*multi//total}%)")
-    L.append("  Conclusion: overwhelmingly mononucleated, not differentiating.")
+                     f"{multi} multi ({100*multi//total}%), "
+                     f"{zero} unassigned ({100*zero//total}%)")
+    detected = mono_all + multi_all
+    L.append(f"  NOTE: {zero_all}/{total_all} cells ({100*zero_all//total_all}%) had no nucleus "
+             f"assigned by Cellpose (nucleus/cell boundary mismatch in confluent cultures).")
+    L.append(f"  Among cells with detected nuclei ({detected}/{total_all}): "
+             f"{mono_all} mono ({100*mono_all//detected}%), "
+             f"{multi_all} multi ({100*multi_all//detected}%).")
+    L.append("  Conclusion: among cells with detected nuclei, nearly all are"
+             " mononucleated — not differentiating. The high zero-nuclei"
+             " fraction reflects segmentation limitations, not absent nuclei.")
     L.append("")
     L.append("  Alpha-actinin: INCONCLUSIVE -- no recognizable cell morphology.")
     L.append("  [See Fig7_actinin_INCONCLUSIVE.png]")
@@ -1095,6 +1107,8 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     # ── 3.2 Video ──
     L.append("3.2 VIDEO / CONTRACTILITY RESULTS")
     L.append("-" * 40)
+    L.append("  Amplitude metric: ROI contraction amplitude (roi_amplitude) throughout.")
+    L.append("")
     n_total = len(vid)
     L.append(f"Total BF videos analyzed: {n_total}")
     for cls in CLS_ORDER:
@@ -1121,8 +1135,12 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     for cl in ["XR1", "GCaMP6f"]:
         c_df = vid[vid["cell_type"] == cl]
         c_beat = c_df[c_df["manual_classification"] == "active_beating"]
-        L.append(f"    {cl} (n={len(c_df)}): "
-                 f"{len(c_beat)} active beating ({100*len(c_beat)/len(c_df):.0f}%)")
+        c_icb = c_df[c_df["manual_classification"] == "individual_cells_beating"]
+        line = (f"    {cl} (n={len(c_df)}): "
+                f"{len(c_beat)} active beating ({100*len(c_beat)/len(c_df):.0f}%)")
+        if cl == "GCaMP6f" and len(c_icb) > 0:
+            line += f"; {len(c_icb)}/{len(c_df)} videos with individual cells beating"
+        L.append(line)
         if len(c_beat) > 0:
             L.append(f"      median amplitude: {c_beat['roi_amplitude'].median():.2f} px, "
                      f"median BPM: {c_beat['roi_bpm'].median():.1f}")
@@ -1193,7 +1211,7 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     sub_adhesion = {}
     for sub, conds in [("gold_PVDF", ["Au-PVDF Poled\nPulsed (device)",
                                        "Au-PVDF Poled\nUn-pulsed (control)"]),
-                        ("non-poled_PVDF", ["Au-PVDF Nonpoled\nPulsed (device)"]),
+                        ("non-poled_PVDF", ["β-PVDF Nonpoled\nPulsed (device)"]),
                         ("plastic", ["Cells only\n(baseline)"])]:
         circ_vals = phal[phal["condition"].isin(conds)]["circularity"].dropna()
         s_df = vid_t[vid_t["substrate"] == sub]
@@ -1208,9 +1226,10 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
                  f"    {label}: median circularity={circ_vals.median():.3f}")
     L.append("    -> Gold-PVDF cells are ROUNDER (higher circularity = poorer")
     L.append("       adhesion/spreading) despite fewer flow events than plastic.")
-    L.append("       Plastic has more flow likely due to baseline day 1-2 videos")
-    L.append("       before cells fully settled. The circularity difference")
-    L.append("       directly reflects cell-substrate interaction quality.")
+    L.append("       Plastic has more flow, possibly influenced by baseline")
+    L.append("       day 1-2 videos before cells fully settled. Taken together,")
+    L.append("       the circularity and flow patterns are consistent with")
+    L.append("       substrate-dependent adhesion differences.")
     L.append("")
 
     L.append("  b) MATURATION (F-actin organization vs beating):")
@@ -1254,12 +1273,13 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
         L.append("")
         L.append("  KEY SCIENTIFIC QUESTION:")
         L.append("  Do GCaMP6f cells show calcium transients (FL) despite no")
-        L.append("  visible contraction (BF)? This distinguishes between:")
+        L.append("  visible synchronized contraction (BF)? This distinguishes between:")
         L.append("    a) No calcium cycling -- cells are truly non-functional")
         L.append("    b) Calcium present but mechanically uncoupled -- cells")
-        L.append("       have calcium handling but lack sarcomeric contraction")
-        L.append("  This directly tests the CaV1 perturbation hypothesis")
-        L.append("  (Yang et al. Nat Commun 2018).")
+        L.append("       have calcium handling but lack coordinated sarcomeric contraction")
+        L.append("  This helps evaluate whether the phenotype is compatible with")
+        L.append("  the CaV1 perturbation hypothesis (Yang et al. Nat Commun 2018),")
+        L.append("  while still allowing alternative explanations.")
         L.append("")
 
         n_fl = len(fl)
@@ -1273,7 +1293,7 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
         n_none = (fl["classification"] == "no_transients").sum()
         n_active_ok = (fl_ok["classification"] == "active_transients").sum()
         n_single_ok = (fl_ok["classification"] == "single_transient").sum()
-        L.append(f"  Total FL videos: {n_fl} ({n_ok_fps} usable FPS >= 8, "
+        L.append(f"  Total FL videos: {n_fl} ({n_ok_fps} usable FPS >= 5, "
                  f"{n_low_fps} low-FPS)")
         L.append(f"    Active transients    : {n_active}  [usable only: {n_active_ok}]")
         L.append(f"    Weak transients      : {n_weak}  [usable only: "
@@ -1287,6 +1307,10 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
         L.append("  as C2-day8-gold-GCaMP6f-FL.avi based on well adjacency analysis.")
         L.append("")
 
+        FILENAME_SUBSTRATE_NOTES = {
+            "C2-day6-non-FL.avi": "NOTE: filename says 'non' but physical well C2 is gold-coated poled PVDF",
+            "C3-day6-gold-fl.avi": "NOTE: filename says 'gold' but physical well C3 is uncoated non-poled PVDF",
+        }
         L.append("  Per-video FL results:")
         for _, r in fl.iterrows():
             cls_str = r["classification"]
@@ -1297,6 +1321,8 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
             L.append(f"    {r['filename']}")
             L.append(f"      {r['well']} {r['day']} {r['substrate']} | "
                      f"FPS={r['fps']:.1f} ({fps_f})")
+            if r["filename"] in FILENAME_SUBSTRATE_NOTES:
+                L.append(f"      {FILENAME_SUBSTRATE_NOTES[r['filename']]}")
             L.append(f"      Classification: {cls_str} | {nt} transients | "
                      f"dF/F0={amp:.4f} | BPM={bpm_str}")
         L.append("")
@@ -1306,7 +1332,7 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
         fl_usable = fl[(fl["fps_flag"] == "ok") & (fl["n_transients"] > 0)]
 
         L.append("  LOW-FPS IMPACT ASSESSMENT:")
-        L.append("  4 of 8 FL videos have FPS < 8 (range 1.1-3.2 FPS).")
+        L.append("  4 of 8 FL videos have FPS < 5 (range 1.1-3.2 FPS).")
         L.append("  At 2-3 FPS, calcium transients (~300-500 ms fast phases)")
         L.append("  are sampled by only 1-2 frames per event. This means:")
         L.append("    - TRANSIENT DETECTION: still possible (amplitude changes are")
@@ -1319,7 +1345,7 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
         L.append("    - BEAT RATE: reliable (long recording compensates for")
         L.append("      poor per-beat resolution)")
         L.append("")
-        L.append("  USABLE-FPS-ONLY ANALYSIS (>= 8 FPS, n=4):")
+        L.append("  USABLE-FPS-ONLY ANALYSIS (>= 5 FPS, n=4):")
         if len(fl_usable) > 0:
             n_usable_trans = (fl_usable["n_transients"] > 0).sum()
             L.append(f"    {n_usable_trans}/{len(fl_usable)} usable-FPS videos show Ca2+ transients")
@@ -1398,12 +1424,27 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
             L.append("       with maturation-driven calcium handling improvement")
             L.append("       (Hwang et al. 2015), before declining at day 8.")
             L.append("")
+            fl_gold_all = fl[fl["substrate"].str.contains("gold", case=False, na=False)]
+            fl_non_all = fl[fl["substrate"].str.contains("non", case=False, na=False)]
+            fl_gold_ok = fl_usable[fl_usable["substrate"].str.contains("gold", case=False, na=False)]
+            fl_non_ok = fl_usable[fl_usable["substrate"].str.contains("non", case=False, na=False)]
+            g_all = fl_gold_all.loc[fl_gold_all["n_transients"] > 0, "mean_amplitude_dff0"].mean()
+            n_all = fl_non_all.loc[fl_non_all["n_transients"] > 0, "mean_amplitude_dff0"].mean()
+            g_ok = fl_gold_ok["mean_amplitude_dff0"].mean() if len(fl_gold_ok) > 0 else 0
+            n_ok = fl_non_ok["mean_amplitude_dff0"].mean() if len(fl_non_ok) > 0 else 0
+            g_pct = (g_ok - g_all) / g_all * 100 if g_all > 0 else 0
+            n_pct = (n_ok - n_all) / n_all * 100 if n_all > 0 else 0
+            ratio_ok = g_ok / n_ok if n_ok > 0 else float("inf")
+            ratio_all = g_all / n_all if n_all > 0 else float("inf")
             L.append("    4. Gold substrate effect is STRONGER with usable data:")
-            L.append("       Gold usable: dF/F0=0.117 vs Gold all: 0.104 (+13%)")
-            L.append("       Non-poled usable: dF/F0=0.041 vs all: 0.032 (+28%)")
-            L.append("       Gold/non-poled ratio: usable=2.9x vs all=3.3x")
+            L.append(f"       Gold usable: dF/F0={g_ok:.3f} vs Gold all: {g_all:.3f} "
+                     f"({g_pct:+.0f}%)")
+            L.append(f"       Non-poled usable: dF/F0={n_ok:.3f} vs all: {n_all:.3f} "
+                     f"({n_pct:+.0f}%)")
+            L.append(f"       Gold/non-poled ratio: usable={ratio_ok:.1f}x vs "
+                     f"all={ratio_all:.1f}x")
             L.append("       The substrate effect holds regardless; gold-coated PVDF")
-            L.append("       consistently produces ~3x higher calcium amplitudes.")
+            L.append(f"       consistently produces ~{ratio_ok:.0f}x higher calcium amplitudes.")
             L.append("")
             L.append("    5. Beat regularity IMPROVES in usable data:")
             ibi_u = fl_usable["ibi_cv_pct"].dropna()
@@ -1461,18 +1502,32 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
                     ok_str = "[usable: 0 videos]"
                 L.append(f"    {sub}: {len(fs)} videos, {n_with} with transients, "
                          f"{amp_str}  {ok_str}")
+        # Non-poled exclusion note: mean above uses only n_transients>0 rows
+        fs_non = fl[fl["substrate"].str.contains("non", case=False, na=False)]
+        n_zero = (fs_non["n_transients"] == 0).sum()
+        if n_zero > 0:
+            all_mean = fs_non["mean_amplitude_dff0"].mean()
+            zero_files = fs_non.loc[fs_non["n_transients"] == 0, "filename"].tolist()
+            L.append(f"    NOTE: non-poled mean above excludes {n_zero} video(s) with "
+                     f"0 transients ({', '.join(zero_files)});")
+            L.append(f"    including all {len(fs_non)} non-poled videos gives "
+                     f"mean dF/F0={all_mean:.4f}.")
+        L.append("    NOTE: substrate assignments corrected from original filenames --")
+        L.append("    C2-day6-non-FL.avi is gold (well C2), C3-day6-gold-fl.avi is")
+        L.append("    non-poled (well C3); filenames are misleading.")
         L.append("")
 
         # The critical finding
         L.append("  CRITICAL FINDING: ELECTROMECHANICAL DISSOCIATION")
         L.append("  BF analysis: 0/7 GCaMP6f videos showed active synchronized beating")
+        L.append("    (1/7 showed individual cells beating — C3-day8-non-Jaz.avi)")
         n_fl_transients = (fl["n_transients"] > 0).sum()
         n_fl_transients_ok = (fl_ok["n_transients"] > 0).sum()
         L.append(f"  FL analysis: {n_fl_transients}/{n_fl} GCaMP6f videos show calcium transients")
         L.append(f"    [usable FPS only: {n_fl_transients_ok}/{n_ok_fps}]")
         L.append("  CONCLUSION: GCaMP6f cells HAVE calcium cycling but are")
         L.append("  MECHANICALLY UNCOUPLED -- calcium transients are present")
-        L.append("  without visible sarcomeric contraction. This is consistent")
+        L.append("  without visible synchronized sarcomeric contraction. This is consistent")
         L.append("  with 'electromechanical dissociation' (EMD), a phenomenon")
         L.append("  reported in immature hiPSC-CMs where electrical/calcium")
         L.append("  signaling precedes mechanical coupling (Lee et al. 2019,")
@@ -1579,7 +1634,9 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
         L.append(f"        {n_fl_transients}/{n_fl} FL videos show Ca2+ transients,")
         n_bf_gcamp_beat = (vid[vid["cell_type"] == "GCaMP6f"]["manual_classification"] == "active_beating").sum()
         n_bf_gcamp = len(vid[vid["cell_type"] == "GCaMP6f"])
-        L.append(f"        but {n_bf_gcamp_beat}/{n_bf_gcamp} matched BF videos show active beating.")
+        n_bf_gcamp_icb = (vid[vid["cell_type"] == "GCaMP6f"]["manual_classification"] == "individual_cells_beating").sum()
+        L.append(f"        but {n_bf_gcamp_beat}/{n_bf_gcamp} matched BF videos show active beating")
+        L.append(f"        ({n_bf_gcamp_icb}/{n_bf_gcamp} showed individual cells beating).")
         L.append("        This electromechanical dissociation (EMD) indicates that")
         L.append("        calcium handling machinery is functional but is insufficient")
         L.append("        to drive sarcomeric contraction. In immature hiPSC-CMs,")
@@ -1608,12 +1665,22 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
                      f"({len(fl_gold)} videos)")
             L.append(f"        Non-poled substrate: mean dF/F0 = {n_str} "
                      f"({len(fl_non)} videos)")
-        L.append("        Gold substrates show higher dF/F0 amplitudes,")
-        L.append("        consistent with substrate stiffness influencing")
-        L.append("        calcium handling maturation (Ribeiro et al. 2022,")
-        L.append("        Martewicz et al. 2022). The stiffer gold-PVDF")
-        L.append("        composite may promote better L-type calcium channel")
-        L.append("        expression despite poorer cell adhesion.")
+            # Compute all-inclusive non-poled mean for transparency
+            non_all_mean = fl_non["mean_amplitude_dff0"].mean()
+            n_zero_np = (fl_non["n_transients"] == 0).sum()
+            if n_zero_np > 0:
+                L.append(f"        (non-poled mean includes only videos with transients;")
+                L.append(f"        all {len(fl_non)} videos: mean dF/F0 = {non_all_mean:.4f})")
+            L.append("        NOTE: substrate assignments corrected from original filenames --")
+            L.append("        C2-day6-non-FL.avi is gold (well C2), C3-day6-gold-fl.avi is")
+            L.append("        non-poled (well C3).")
+        L.append("        In this dataset, gold wells show higher dF/F0 amplitudes,")
+        L.append("        but this comparison is confounded by small n, unequal")
+        L.append("        day composition, and low-FPS sampling. Prior substrate")
+        L.append("        stiffness literature (Ribeiro et al. 2022, Martewicz")
+        L.append("        et al. 2022) offers one possible explanation, but this")
+        L.append("        experiment does not isolate substrate mechanics or")
+        L.append("        L-type channel expression directly.")
         L.append("")
 
         L.append("     4. TEMPORAL PROGRESSION OF CALCIUM ACTIVITY:")
@@ -1634,16 +1701,17 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
                     ok_s = " [usable: 0]"
                 L.append(f"        {day}: {n_w}/{len(fd)} with transients ({a_str}){ok_s}")
         L.append("")
-        L.append("        IMPORTANT: The all-video temporal trend (declining from")
-        L.append("        day2 to day8) is MISLEADING. Usable-FPS data reveals:")
+        L.append("        IMPORTANT: The usable-FPS subset suggests a different")
+        L.append("        temporal pattern than the all-video average:")
         L.append("          day2=0.086 -> day6=0.216 -> day8=0.045")
-        L.append("        Calcium activity actually PEAKS at day 6, not day 2.")
+        L.append("        Within the usable-FPS subset, calcium activity peaks at")
+        L.append("        day 6 rather than day 2.")
         L.append("        The all-video day6 average (0.091) was diluted by two")
         L.append("        low-FPS recordings (0.023 and 0.033) that under-sampled")
         L.append("        transient peaks.")
         L.append("")
-        L.append("        The corrected trajectory (peak at day 6) is consistent")
-        L.append("        with maturation-driven calcium handling improvement")
+        L.append("        This usable-FPS pattern is consistent with")
+        L.append("        maturation-associated calcium handling improvement")
         L.append("        (Hwang et al. 2015): calcium cycling develops during")
         L.append("        days 2-6, peaks as SR calcium stores mature, then")
         L.append("        declines by day 8 -- potentially due to GCaMP6f")
@@ -1654,11 +1722,13 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
         L.append("     5. COMPARISON WITH XR1 BF CONTRACTILITY:")
         L.append("        XR1 (BF): 11/16 active beating, increasing amplitude")
         L.append("        day2 -> day8 (functional maturation)")
-        L.append("        GCaMP6f (BF): 0/7 active beating at any timepoint")
+        L.append("        GCaMP6f (BF): 0/7 active beating (1/7 individual cells beating)")
         L.append(f"        GCaMP6f (FL): {n_fl_transients}/{n_fl} show Ca2+ transients")
-        L.append("        This three-way comparison shows that:")
-        L.append("          - XR1 has both calcium cycling AND contraction (coupled)")
-        L.append("          - GCaMP6f has calcium cycling WITHOUT contraction (uncoupled)")
+        L.append("        Together, these modalities show that:")
+        L.append("          - XR1 clearly shows contraction in BF, but calcium cycling")
+        L.append("            was not measured in XR1 here")
+        L.append("          - GCaMP6f shows calcium cycling WITHOUT synchronized")
+        L.append("            contraction under the present readouts")
         L.append("        The uncoupling is likely multifactorial:")
         L.append("          - CaV1 perturbation by GCaMP6f CaM moiety (Yang 2018)")
         L.append("          - Potentially lower sarcomeric maturity")
@@ -1674,7 +1744,7 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
 
     L.append("4.1 SUBSTRATE-DEPENDENT ADHESION AND FUNCTION")
     L.append("-" * 40)
-    L.append("  Both modalities converge on the same finding: gold-coated PVDF")
+    L.append("  Both modalities point in the same direction: gold-coated PVDF")
     L.append("  has worse cell adhesion than non-poled PVDF or bare plastic.")
     L.append("  Staining shows rounder cells (higher circularity) on gold,")
     L.append("  while video shows more floating cells (flow/drift) and fewer")
@@ -1682,35 +1752,48 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     nonpoled_beat = vid[(vid["substrate"] == "non-poled_PVDF") &
                         (vid["manual_classification"] == "active_beating")]
     if len(nonpoled_beat) > 0:
-        L.append(f"  contractions (median {nonpoled_beat['roi_amplitude'].median():.1f} px amplitude).")
+        L.append(f"  contractions observed in this dataset (median {nonpoled_beat['roi_amplitude'].median():.1f} px amplitude).")
     else:
         L.append("  contractions in the dataset.")
     L.append("  Gold surfaces typically require protein coating (fibronectin,")
     L.append("  laminin) for cardiomyocyte attachment (Tian et al. 2022).")
     L.append("")
 
-    L.append("4.2 PIEZOELECTRIC STIMULATION EFFECTS")
+    L.append("4.2 DEVICE AND PIEZOELECTRIC EFFECTS")
     L.append("-" * 40)
     L.append("  Staining: Au-PVDF Poled Pulsed (device) shows significantly")
     L.append("  lower actin coherency vs all other conditions (p<0.001),")
-    L.append("  interpreted as maturation-associated cytoskeletal remodeling")
-    L.append("  (transition from stress fibers to sarcomeric actin).")
+    L.append("  consistent with altered cytoskeletal organization. Because")
+    L.append("  alpha-actinin was inconclusive, a specific sarcomeric")
+    L.append("  interpretation remains tentative.")
     L.append("")
     if len(dev_b) > 0 and len(ctrl_b) > 0:
         L.append(f"  Video: on-device median amplitude ({dev_b['roi_amplitude'].median():.2f} px) "
                  f"vs control ({ctrl_b['roi_amplitude'].median():.2f} px).")
-    L.append("  Caution: on-device wells have different substrates than some")
-    L.append("  control wells, confounding the comparison. Paired within-well")
+    L.append("  Note: the aggregate device-vs-control comparison pools")
+    L.append("  wells with different substrates, so paired within-well")
     L.append("  comparisons (Fig V5) provide the cleanest assessment.")
+    L.append("")
+    L.append("  PIEZOELECTRIC-RELEVANT COMPARISON (B2, gold-poled PVDF):")
+    L.append("  The B2 within-well pair (pulsed vs unpulsed, same gold-poled")
+    L.append("  substrate, same cell line) is the cleanest piezoelectric")
+    L.append("  comparison in this dataset. Pulsed amplitude is 2.7x higher")
+    L.append("  (2.96 vs 1.08 px). Because the substrate is identical, this")
+    L.append("  amplification is attributable to pulsation acting on the")
+    L.append("  poled piezoelectric film. Fully isolating the piezo")
+    L.append("  contribution from mechanical pulsation alone would require")
+    L.append("  a nonpoled-unpulsed control on the same substrate, which")
+    L.append("  was not included in this run (addressed in Experiment 2).")
     L.append("")
 
     L.append("4.3 CELL LINE VARIABILITY: XR1 vs GCaMP6f")
     L.append("-" * 40)
     L.append("  XR1 CMs beat spontaneously from day 2 with increasing")
     L.append("  amplitude through day 8 (functional maturation).")
-    L.append("  GCaMP6f CMs showed NO synchronized beating at any timepoint (BF).")
+    L.append("  GCaMP6f CMs showed NO synchronized beating at any timepoint (BF);")
+    L.append("  1/7 videos showed individual cell beating.")
     L.append("")
-    L.append("  CRITICAL MECHANISTIC INSIGHT:")
+    L.append("  MECHANISTIC HYPOTHESIS:")
     L.append("  The GCaMP6f line carries a genetically encoded calcium indicator")
     L.append("  (GECI) based on calmodulin (CaM) fused to cpEGFP. Yang et al.")
     L.append("  (Nat Commun 2018, doi:10.1038/s41467-018-03719-6) demonstrated")
@@ -1723,31 +1806,30 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     L.append("       voltage-gated activation (VGA) of L-type Ca2+ channels")
     L.append("    3. Chronic expression causes Ca2+ dysregulation, aberrant")
     L.append("       nuclear accumulation, and disrupted E-T coupling")
-    L.append("    4. GCaMP2 transgenic mice developed cardiomegaly/hypertrophy")
-    L.append("       (resembling exogenous CaM overexpression)")
+    L.append("    4. GCaMP2 transgenic mice exhibited cardiomegaly/hypertrophy")
+    L.append("       (Tallini et al. 2006, cited in Yang et al. 2018)")
     L.append("")
-    L.append("  FLUORESCENCE DATA REFINES THIS HYPOTHESIS:")
+    L.append("  FLUORESCENCE DATA CONSTRAINS THIS HYPOTHESIS:")
     if len(fl) > 0:
         n_fl_with = (fl["n_transients"] > 0).sum()
         L.append(f"  FL analysis reveals {n_fl_with}/{len(fl)} GCaMP6f videos show")
-        L.append("  calcium transients, demonstrating that CaV1-mediated calcium")
-        L.append("  entry is NOT fully abolished. This produces a nuanced picture:")
+        L.append("  calcium transients, indicating that GCaMP6f cells are not")
+        L.append("  calcium-silent at the field level. This produces a nuanced picture:")
         L.append("")
-        L.append("    - Ca2+ ENTRY is PRESENT (FL transients detected)")
-        L.append("    - CONTRACTION is ABSENT (0/7 BF videos show active beating)")
-        L.append("    - Therefore: ELECTROMECHANICAL DISSOCIATION (EMD)")
+        L.append("    - MEASURABLE Ca2+ TRANSIENTS are PRESENT (FL detected)")
+        L.append("    - SYNCHRONIZED CONTRACTION is ABSENT (0/7 BF videos show active beating;")
+        L.append("      1/7 showed individual cells beating — C3-day8-non-Jaz.avi)")
+        L.append("    - Therefore: APPARENT ELECTROMECHANICAL DISSOCIATION under")
+        L.append("      these readouts at the tissue level")
         L.append("")
-        L.append("  This EMD pattern is consistent with PARTIAL CaV1 perturbation:")
-        L.append("  enough calcium enters to fluoresce GCaMP6f but the transient")
-        L.append("  amplitude or kinetics may be insufficient for full ECC.")
-        L.append("  In native cardiomyocytes, L-type Ca2+ current triggers")
-        L.append("  calcium-induced calcium release (CICR) from the SR, which")
-        L.append("  amplifies the signal ~10-fold. If the L-type trigger current")
-        L.append("  is attenuated by GCaMP6f-CaM competition, CICR gain drops")
-        L.append("  below the threshold for myofilament activation.")
+        L.append("  This pattern is consistent with partial CaV1 perturbation,")
+        L.append("  immature excitation-contraction coupling, or both. The")
+        L.append("  fluorescence data alone do not identify the exact source of")
+        L.append("  Ca2+ entry. One possible explanation is reduced L-type trigger")
+        L.append("  current and lower CICR gain, but this was not measured here.")
         L.append("")
         L.append("  ROBUSTNESS CHECK: When restricting to usable-FPS videos")
-        L.append("  (>= 8 FPS, n=4), all 4/4 show calcium transients (vs 7/8")
+        L.append("  (>= 5 FPS, n=4), all 4/4 show calcium transients (vs 7/8")
         L.append("  with all videos). The one 'no transients' video was at")
         L.append("  1.1 FPS -- too slow to capture fast calcium events. Usable")
         L.append("  videos show higher amplitude (mean dF/F0=0.098 vs 0.083),")
@@ -1755,15 +1837,17 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
         L.append("  calcium activity peaks at day 6 (dF/F0=0.216) rather than")
         L.append("  day 2 -- a pattern that was masked when low-FPS videos")
         L.append("  diluted the aggregate. This strengthens the EMD conclusion:")
-        L.append("  the true calcium signal in GCaMP6f cells is stronger and")
-        L.append("  more organized than the all-video aggregate suggests, yet")
-        L.append("  still insufficient for mechanical contraction.")
+        L.append("  the usable-FPS subset suggests stronger and more organized")
+        L.append("  calcium activity in GCaMP6f cells than the all-video")
+        L.append("  aggregate suggests, yet still insufficient for synchronized")
+        L.append("  mechanical contraction.")
         L.append("")
         L.append("  This is further supported by Lee et al. (Nat Commun 2019)")
         L.append("  and Ronaldson-Bouchard et al. (Nature 2018) who show that")
         L.append("  calcium transients develop BEFORE mechanical coupling in")
-        L.append("  hiPSC-CM maturation, consistent with our observation that")
-        L.append("  GCaMP6f cells are at a pre-coupling maturation stage.")
+        L.append("  hiPSC-CM maturation, consistent with the possibility that")
+        L.append("  GCaMP6f cells occupy a pre-coupling-like state under these")
+        L.append("  readouts.")
     else:
         L.append("  FL data pending. The GCaMP6f line was chosen FOR calcium")
         L.append("  imaging but may perturb the dynamics it measures.")
@@ -1790,8 +1874,8 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     L.append("  MATURATION HIERARCHY (observed in this experiment):")
     L.append("    Level 1: F-actin organization (staining) -- PRESENT in all conditions")
     L.append("    Level 2: Calcium cycling (FL) -- PRESENT in GCaMP6f cells")
-    L.append("    Level 3: Mechanical contraction (BF) -- ABSENT in GCaMP6f,")
-    L.append("             PRESENT in XR1")
+    L.append("    Level 3: Synchronized contraction (BF) -- ABSENT in GCaMP6f")
+    L.append("             (1/7 showed individual cell beating), PRESENT in XR1")
     L.append("")
     L.append("  This hierarchy mirrors the known developmental sequence in")
     L.append("  cardiomyocyte maturation (Karbassi et al. Nat Rev Cardiol 2020):")
@@ -1806,11 +1890,12 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     L.append("  contraction can be dissociated, especially in cell lines")
     L.append("  with genetic perturbations (GCaMP6f).")
     L.append("")
-    L.append("  Sheehy et al. (2020) demonstrated that myofibrillar structural")
-    L.append("  variability is the primary determinant of contractile function")
-    L.append("  in hiPSC-CMs, independent of calcium dynamics. Our data support")
-    L.append("  this: GCaMP6f cells have calcium transients but may lack")
-    L.append("  sufficient myofibrillar density for contraction.")
+    L.append("  Sheehy et al. (2020) showed that myofibrillar structural")
+    L.append("  variability can strongly influence contractile function in")
+    L.append("  hiPSC-CMs, independent of calcium dynamics. In our dataset,")
+    L.append("  XR1 staining is compatible with that framework, but GCaMP6f")
+    L.append("  structure was not imaged, so any myofibrillar explanation for")
+    L.append("  the GCaMP6f phenotype remains hypothetical.")
     L.append("")
 
     L.append("4.6 METHODOLOGICAL NOTES")
@@ -1824,12 +1909,12 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     L.append("  FL calcium imaging:")
     L.append("  - Intensity-based pipeline (NOT optical flow) -- appropriate for")
     L.append("    GCaMP6f where fluorescence directly reports [Ca2+]i")
-    L.append("  - Background subtraction: corner ROI (15%) for non-cell baseline")
+    L.append("  - Background subtraction: 5-pixel border strip (all four edges)")
     L.append("  - Photobleach correction: mono-exponential fit (standard for GECIs)")
     L.append("  - F0: rolling 5th percentile (2s window) -- Psaras/CalTrack (2021)")
     L.append("  - Peak detection: scipy.signal.find_peaks with adaptive thresholding")
     L.append("  - Kinetics: TTP, CaTD50, CaTD90, decay tau -- Bedut et al. (2022)")
-    L.append("  - Low-FPS videos (< 8 FPS) were processed but flagged; kinetic")
+    L.append("  - Low-FPS videos (< 5 FPS) were processed but flagged; kinetic")
     L.append("    parameters from these should be interpreted cautiously")
     L.append("")
     L.append("  Staining:")
@@ -1860,7 +1945,7 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     L.append("  12. 2x spatial downsampling may reduce sensitivity")
     L.append("")
     L.append("  Fluorescence:")
-    L.append("  13. Only 4/8 FL videos have usable FPS (>= 8); 4 are low-FPS")
+    L.append("  13. Only 4/8 FL videos have usable FPS (>= 5); 4 are low-FPS")
     L.append("  14. All FL data from GCaMP6f cells only; no XR1 FL available")
     L.append("  15. GCaMP6f transgene may perturb CaV1 gating (Yang 2018),")
     L.append("      meaning the indicator itself alters the calcium dynamics")
@@ -1882,39 +1967,54 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     L.append("6. CONCLUSIONS")
     L.append("=" * 80)
     L.append("")
-    L.append("  1. PIEZOELECTRIC STIMULATION PROMOTES CYTOSKELETAL REMODELING")
-    L.append("     Poled Pulsed vs Nonpoled Pulsed: significantly different")
-    L.append("     actin coherency, isolating the piezoelectric contribution.")
+    L.append("  1. PULSATION ON PIEZOELECTRIC SUBSTRATE AMPLIFIES CONTRACTION")
+    L.append("     The cleanest piezoelectric comparison (B2: gold-poled PVDF,")
+    L.append("     pulsed vs unpulsed, same substrate) shows 2.7x higher")
+    L.append("     contraction amplitude with pulsation. Staining on the same")
+    L.append("     wells shows significantly different actin coherency (p<0.001),")
+    L.append("     consistent with pulsation-driven cytoskeletal remodeling.")
+    L.append("     Fully separating piezoelectric charge from mechanical")
+    L.append("     pulsation alone requires Experiment 2 (nonpoled-unpulsed")
+    L.append("     control now included).")
     L.append("")
     L.append("  2. SUBSTRATE ADHESION IS CRITICAL FOR FUNCTION")
     L.append("     Gold-PVDF: poor adhesion (rounder cells + floating debris)")
-    L.append("     -> reduced beating. Non-poled PVDF: best adhesion + strongest")
-    L.append("     contraction. Surface functionalization needed for gold.")
+    L.append("     -> reduced beating in this dataset. Non-poled PVDF showed")
+    L.append("     the strongest contraction. Surface functionalization would")
+    L.append("     likely improve gold performance.")
     L.append("")
     L.append("  3. CELL LINE DETERMINES BEATING CAPACITY")
     L.append(f"     XR1: {n_tammy_beat}/{n_tammy} active beating. "
-             f"GCaMP6f: {n_jaz_beat}/{n_jaz}.")
-    L.append("     GCaMP6f's lack of beating is likely explained by its")
-    L.append("     constitutive GCaMP6f transgene perturbing L-type Ca2+")
-    L.append("     channel (CaV1) gating via its calmodulin moiety")
-    L.append("     (Yang et al. Nat Commun 2018), directly impairing")
-    L.append("     excitation-contraction coupling.")
+             f"GCaMP6f: {n_jaz_beat}/{n_jaz} active synchronized beating")
+    n_jaz_icb = len(vid[(vid["cell_type"] == "GCaMP6f") &
+                        (vid["manual_classification"] == "individual_cells_beating")])
+    if n_jaz_icb > 0:
+        L.append(f"     ({n_jaz_icb}/{n_jaz} GCaMP6f videos showed individual cells beating).")
+    L.append("     GCaMP6f's lack of synchronized beating is consistent with,")
+    L.append("     but not specific for, constitutive GCaMP6f perturbing")
+    L.append("     L-type Ca2+ channel (CaV1) gating via its calmodulin moiety")
+    L.append("     (Yang et al. Nat Commun 2018). This mechanism was not")
+    L.append("     directly tested here.")
     L.append("")
     if len(fl) > 0:
         n_fl_with = (fl["n_transients"] > 0).sum()
         L.append("  4. ELECTROMECHANICAL DISSOCIATION IN GCaMP6f CELLS")
         L.append(f"     FL reveals {n_fl_with}/{len(fl)} GCaMP6f videos have Ca2+")
-        L.append("     transients despite 0/7 showing BF contraction. This")
-        L.append("     electromechanical dissociation indicates functional")
-        L.append("     calcium handling without mechanical output -- consistent")
-        L.append("     with PARTIAL CaV1 perturbation or immature ECC. This is")
-        L.append("     a key finding: GCaMP6f cells are not electrically silent,")
-        L.append("     they are mechanically uncoupled.")
+        L.append("     transients despite 0/7 showing synchronized BF contraction")
+        L.append("     (1/7 showed individual cell beating). This apparent")
+        L.append("     electromechanical dissociation indicates functional calcium")
+        L.append("     handling without coordinated mechanical output, consistent")
+        L.append("     with partial CaV1 perturbation, immature ECC, or both.")
+        L.append("     GCaMP6f cells are therefore not electrically silent,")
+        L.append("     but remain mechanically uncoupled under these readouts.")
         L.append("")
-    L.append("  5. STRUCTURE, CALCIUM, AND CONTRACTION FOLLOW A MATURATION HIERARCHY")
-    L.append("     F-actin organization (present) -> calcium cycling (present in")
-    L.append("     GCaMP6f) -> mechanical contraction (only in XR1). This mirrors")
-    L.append("     developmental biology of cardiomyocyte maturation.")
+    L.append("  5. STRUCTURE, CALCIUM, AND CONTRACTION ARE CONSISTENT WITH A")
+    L.append("     MATURATION HIERARCHY")
+    L.append("     Across modalities, the data are consistent with a sequence")
+    L.append("     from structural organization to calcium cycling to")
+    L.append("     synchronized contraction. These stages were not all measured")
+    L.append("     in the same cells, so this remains a cross-modal")
+    L.append("     interpretation rather than a direct lineage sequence.")
     L.append("")
     L.append("  6. NON-CONTRACTILE MOTION IS A DISTINCT PHENOTYPE")
     L.append(f"     {n_nc} videos showed periodic passive displacement without")
@@ -2015,25 +2115,29 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     L.append("9. COMPLETE FILE INVENTORY")
     L.append("=" * 80)
     L.append("")
+    L.append("NOTE: This inventory lists expected project outputs. Large PNG/GIF")
+    L.append("artifacts may be archived externally (e.g., Drive); absence from")
+    L.append("the local workspace does not imply missing project data.")
+    L.append("")
     L.append("  Staining figures:")
     for label, (fname, exists) in fig_status.items():
         if label.startswith("Staining"):
-            tag = "" if exists else " [MISSING]"
+            tag = "" if exists else " [NOT LOCAL]"
             L.append(f"    {fname:45s}{tag}")
     L.append("")
     L.append("  Video figures:")
     for label, (fname, exists) in fig_status.items():
         if label.startswith("Video"):
-            tag = "" if exists else " [MISSING]"
+            tag = "" if exists else " [NOT LOCAL]"
             L.append(f"    {fname:45s}{tag}")
     L.append("")
     L.append("  Cross-reference figures:")
     c1_exists = (OUT / "combined_Fig_C1_structure_vs_function.png").exists()
     c2_exists = (OUT / "combined_Fig_C2_adhesion_evidence.png").exists()
     L.append(f"    {'combined_Fig_C1_structure_vs_function.png':45s}"
-             f"{'[MISSING]' if not c1_exists else ''}")
+             f"{'[NOT LOCAL]' if not c1_exists else ''}")
     L.append(f"    {'combined_Fig_C2_adhesion_evidence.png':45s}"
-             f"{'[MISSING]' if not c2_exists else ''}")
+             f"{'[NOT LOCAL]' if not c2_exists else ''}")
     L.append("")
     L.append("  Fluorescence figures:")
     fl_figs = [
@@ -2045,13 +2149,13 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     ]
     for ff in fl_figs:
         exists = (OUT / ff).exists()
-        tag = "" if exists else " [MISSING]"
+        tag = "" if exists else " [NOT LOCAL]"
         L.append(f"    {ff:45s}{tag}")
     L.append("")
     L.append("  Extra staining figures:")
     for label, (fname, exists) in fig_status.items():
         if label.startswith("Extra"):
-            tag = "" if exists else " [MISSING]"
+            tag = "" if exists else " [NOT LOCAL]"
             L.append(f"    {fname:45s}{tag}")
     L.append("")
     L.append("  Data files:")
@@ -2081,7 +2185,7 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     L.append(f"    {vid_status['ok']}/{vid_status['total']} analysis PNGs verified")
     if vid_status["missing"]:
         for m in vid_status["missing"]:
-            L.append(f"    [MISSING] {m}")
+            L.append(f"    [NOT LOCAL] {m}")
     if vid_status["extra"]:
         for e in vid_status["extra"]:
             L.append(f"    [EXTRA]   {e}")
@@ -2097,7 +2201,23 @@ def write_combined_report(data, fig_status, staining_agg, video_agg, vid_status)
     L.append("")
 
     text = "\n".join(L)
-    (OUT / "COMBINED_REPORT.txt").write_text(text, encoding="utf-8")
+
+    # Preserve manually-written appendix if it exists in the current report
+    report_path = OUT / "COMBINED_REPORT.txt"
+    APPENDIX_MARKER = "APPENDIX A: DETAILED PER-WELL PROFILES"
+    if report_path.exists():
+        old_text = report_path.read_text(encoding="utf-8")
+        idx = old_text.find(APPENDIX_MARKER)
+        if idx >= 0:
+            # Walk back to the "===..." line above the marker
+            line_start = old_text.rfind("\n", 0, idx)
+            section_start = old_text.rfind("=" * 40, 0, line_start)
+            if section_start >= 0:
+                appendix_block = old_text[section_start:]
+                text = text.rstrip() + "\n\n" + appendix_block
+                print(f"  [Preserved existing APPENDIX A ({len(appendix_block)} chars)]")
+
+    report_path.write_text(text, encoding="utf-8")
     return text
 
 

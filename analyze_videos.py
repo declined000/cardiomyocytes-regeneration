@@ -83,7 +83,11 @@ def parse_video_metadata(filename):
             well = w.upper()
             break
 
-    substrate = "gold" if "gold" in name else "non"
+    SUBSTRATE_OVERRIDES = {
+        "c2-day6-non-fl.avi": "gold",      # filename says "non" but C2 = gold
+        "c3-day6-gold-fl.avi": "non",       # filename says "gold" but C3 = non-poled
+    }
+    substrate = SUBSTRATE_OVERRIDES.get(name, "gold" if "gold" in name else "non")
 
     if day in ("day1", "day2"):
         recording_type = "baseline"

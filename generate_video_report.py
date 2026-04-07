@@ -65,19 +65,19 @@ CELLLINE_COLORS = {"XR1": "#6baed6", "GCaMP6f": "#fd8d3c"}
 STAINING_CONDS = [
     "Au-PVDF Poled Pulsed (device)",
     "Au-PVDF Poled Un-pulsed (control)",
-    "Au-PVDF Nonpoled Pulsed (device)",
+    "β-PVDF Nonpoled Pulsed (device)",
     "Cells only (baseline)",
 ]
 STAINING_COLORS = {
     "Au-PVDF Poled Pulsed (device)": "#ff9966",
     "Au-PVDF Poled Un-pulsed (control)": "#ffd966",
-    "Au-PVDF Nonpoled Pulsed (device)": "#a8d5a2",
+    "β-PVDF Nonpoled Pulsed (device)": "#a8d5a2",
     "Cells only (baseline)": "#7fbfff",
 }
 STAINING_SHORT = {
     "Au-PVDF Poled Pulsed (device)": "Poled Pulsed\n(device)",
     "Au-PVDF Poled Un-pulsed (control)": "Poled Un-pulsed\n(control)",
-    "Au-PVDF Nonpoled Pulsed (device)": "Nonpoled Pulsed\n(device)",
+    "β-PVDF Nonpoled Pulsed (device)": "Nonpoled Pulsed\n(device)",
     "Cells only (baseline)": "Cells only\n(baseline)",
 }
 
@@ -85,7 +85,7 @@ STAINING_SHORT = {
 STAINING_LABEL_MAP = {
     "Au-PVDF Poled Pulsed (device)": "Au-PVDF Poled\nPulsed (device)",
     "Au-PVDF Poled Un-pulsed (control)": "Au-PVDF Poled\nUn-pulsed (control)",
-    "Au-PVDF Nonpoled Pulsed (device)": "Au-PVDF Nonpoled\nPulsed (device)",
+    "β-PVDF Nonpoled Pulsed (device)": "β-PVDF Nonpoled\nPulsed (device)",
     "Cells only (baseline)": "Cells only\n(baseline)",
 }
 

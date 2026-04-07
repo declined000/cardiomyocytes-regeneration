@@ -9,7 +9,7 @@ Stains analyzed: Phalloidin (F-actin), DAPI (nuclei), Alpha-actinin (inconclusiv
 Conditions:
   1. Au-PVDF Poled, Pulsed (B2 device) - gold+poled PVDF, mechanical+piezoelectric
   2. Au-PVDF Poled, Un-pulsed (B2 control plate) - gold+poled PVDF, no stimulation
-  3. Au-PVDF Nonpoled, Pulsed (A3 device) - gold+nonpoled PVDF, mechanical only
+  3. β-PVDF Nonpoled, Pulsed (A3 device) - uncoated nonpoled β-PVDF, mechanical only
   4. Cells only (B3 control plate) - bare plastic, baseline
 """
 
@@ -41,7 +41,7 @@ PHALLOIDIN_CONDITIONS = {
         "phalloidin": DATA / "control-gold2-b2-phalloidin.tif",
         "dapi": DATA / "control-gold2-b2-dapi.tif",
     },
-    "Au-PVDF Nonpoled\nPulsed (device)": {
+    "β-PVDF Nonpoled\nPulsed (device)": {
         "phalloidin": DATA / "device-non-phalloidin-a3-image.tif",
         "dapi": DATA / "device-non-dapi-a3-image.tif",
     },
@@ -55,7 +55,7 @@ PHALLOIDIN_CONDITIONS = {
 CSV_TO_LABEL = {
     "Gold\n(device)": "Au-PVDF Poled\nPulsed (device)",
     "Gold\n(control plate)": "Au-PVDF Poled\nUn-pulsed (control)",
-    "Nonpoled\n(device)": "Au-PVDF Nonpoled\nPulsed (device)",
+    "Nonpoled\n(device)": "β-PVDF Nonpoled\nPulsed (device)",
     "Cells only\n(control)": "Cells only\n(baseline)",
 }
 
@@ -74,7 +74,7 @@ ACTININ_CONDITIONS = {
 COLORS = {
     "Au-PVDF Poled\nPulsed (device)": "#ff9966",
     "Au-PVDF Poled\nUn-pulsed (control)": "#ffd966",
-    "Au-PVDF Nonpoled\nPulsed (device)": "#a8d5a2",
+    "β-PVDF Nonpoled\nPulsed (device)": "#a8d5a2",
     "Cells only\n(baseline)": "#7fbfff",
 }
 
@@ -370,14 +370,23 @@ def fig6_multinucleation():
         "Method: Cellpose v3 (cyto2 model, GPU)\n"
         "  + classical DAPI nuclei segmentation\n\n"
     )
+    total_all, mono_all, multi_all, zero_all = 0, 0, 0, 0
     for c in conds:
         sub = mn[mn["condition"] == c]
         total = len(sub)
-        mono = (sub["nuclei_count"] == 1).sum()
-        bi = (sub["nuclei_count"] >= 2).sum()
+        mono = int((sub["nuclei_count"] == 1).sum())
+        bi = int((sub["nuclei_count"] >= 2).sum())
+        zero = int((sub["nuclei_count"] == 0).sum())
+        total_all += total; mono_all += mono; multi_all += bi; zero_all += zero
         label = c.replace("\n", " ")
-        summary += f"{label}:\n  {total} cells, {mono} mono ({100*mono/total:.0f}%), {bi} multi ({100*bi/total:.0f}%)\n\n"
-    summary += "\nConclusion: Cells are overwhelmingly\nmononucleated across all conditions.\nExpected for hiPSC-derived CMs."
+        summary += (f"{label}:\n  {total} cells, {mono} mono ({100*mono/total:.0f}%), "
+                    f"{bi} multi ({100*bi/total:.0f}%), "
+                    f"{zero} unassigned ({100*zero/total:.0f}%)\n\n")
+    detected = mono_all + multi_all
+    summary += (f"\n{zero_all}/{total_all} cells ({100*zero_all/total_all:.0f}%) had no\n"
+                f"nucleus assigned (segmentation limitation).\n"
+                f"Among detected ({detected}): {100*mono_all/detected:.0f}% mono.\n"
+                f"Conclusion: mononucleated where\ndetectable. Expected for hiPSC-CMs.")
     axes[2].text(0.05, 0.95, summary, transform=axes[2].transAxes,
                  fontsize=11, fontfamily="monospace", verticalalignment="top",
                  bbox=dict(boxstyle="round", facecolor="lightyellow", edgecolor="gray"))
@@ -581,13 +590,13 @@ def write_text_summary(df, pw_df):
     lines.append("")
     lines.append("Well layout (6-well plates):")
     lines.append("  Control plate: x2 = Gold (Au-PVDF Poled), x3 = Cells only (bare plastic)")
-    lines.append("  Device plate:  x2 = Gold (Au-PVDF Poled), x3 = Nonpoled (Au-PVDF Nonpoled)")
+    lines.append("  Device plate:  x2 = Gold (Au-PVDF Poled), x3 = Nonpoled (β-PVDF Nonpoled)")
     lines.append("  Rows A,B = XR1; Row C = GCaMP6f")
     lines.append("")
     lines.append("  Conditions (Phalloidin analysis):")
     lines.append("    1. Au-PVDF Poled, Pulsed (B2 device)   - gold+poled PVDF, mechanical+piezoelectric")
     lines.append("    2. Au-PVDF Poled, Un-pulsed (B2 ctrl)  - gold+poled PVDF, no stimulation")
-    lines.append("    3. Au-PVDF Nonpoled, Pulsed (A3 device)- gold+nonpoled PVDF, mechanical only")
+    lines.append("    3. β-PVDF Nonpoled, Pulsed (A3 device)- uncoated nonpoled β-PVDF, mechanical only")
     lines.append("    4. Cells only (B3 ctrl)                 - bare plastic, baseline")
     lines.append("")
     lines.append("  NOTE: This is NOT a balanced 2x2 factorial. Control plate column 3")
@@ -682,23 +691,34 @@ def write_text_summary(df, pw_df):
     lines.append("Method: Cellpose v3 deep learning (cyto2 model, GPU)")
     lines.append("  + classical DAPI nuclei segmentation")
     lines.append("")
+    total_all, mono_all, multi_all, zero_all = 0, 0, 0, 0
     for c in conds:
         sub = mn[mn["condition"] == c]
         total = len(sub)
-        mono = (sub["nuclei_count"] == 1).sum()
-        bi = (sub["nuclei_count"] >= 2).sum()
+        mono = int((sub["nuclei_count"] == 1).sum())
+        bi = int((sub["nuclei_count"] >= 2).sum())
+        zero = int((sub["nuclei_count"] == 0).sum())
+        total_all += total; mono_all += mono; multi_all += bi; zero_all += zero
         label = c.replace("\n", " ")
         lines.append(f"  {label}:")
-        lines.append(f"    {total} cells detected, {mono} mononucleated ({100*mono/total:.0f}%), {bi} multinucleated ({100*bi/total:.0f}%)")
+        lines.append(f"    {total} cells detected, {mono} mononucleated ({100*mono/total:.0f}%), "
+                     f"{bi} multinucleated ({100*bi/total:.0f}%), "
+                     f"{zero} no nucleus assigned ({100*zero/total:.0f}%)")
+    detected = mono_all + multi_all
+    lines.append("")
+    lines.append(f"  CAVEAT: {zero_all}/{total_all} cells ({100*zero_all/total_all:.0f}%) had no nucleus")
+    lines.append("  assigned by Cellpose — nucleus/cell boundary mismatch in confluent cultures,")
+    lines.append("  not truly anucleate cells. These are excluded from mono/multi classification.")
     lines.append("")
     lines.append("  INTERPRETATION:")
-    lines.append("  - Cells are overwhelmingly mononucleated across all conditions.")
+    lines.append(f"  - Among cells with detected nuclei ({detected}/{total_all}), "
+                 f"{100*mono_all/detected:.0f}% are mononucleated.")
     lines.append("  - This is expected for hiPSC-derived cardiomyocytes, which typically")
     lines.append("    do not undergo the binucleation seen in adult cardiomyocytes in vivo.")
     lines.append("  - Multinucleation is NOT a differentiating metric for this experiment.")
     lines.append("  - Note: Cellpose detected fewer cells than watershed due to conservative")
-    lines.append("    segmentation in confluent cultures. This is appropriate for per-cell")
-    lines.append("    nuclei counting where boundary accuracy matters most.")
+    lines.append("    segmentation in confluent cultures. The high zero-nuclei fraction")
+    lines.append("    reflects segmentation limitations, not absent nuclei.")
     lines.append("")
 
     lines.append("=" * 80)
@@ -795,7 +815,6 @@ def write_text_summary(df, pw_df):
     lines.append("")
 
     text = "\n".join(lines)
-    (OUT / "REPORT_SUMMARY.txt").write_text(text)
     return text
 
 
@@ -836,7 +855,6 @@ def main():
     print(f"All files saved to: {OUT}/")
     print("=" * 60)
     print()
-    print(text)
 
 
 if __name__ == "__main__":

@@ -54,8 +54,8 @@ FL_VIDEOS = {
     "C2-day2-gold-FL.avi": ("day2", "C2", "gold", "2 FPS"),
     "C3-day2-fl.avi": ("day2", "C3", "non-poled", "1.1 FPS"),
     "C2-day6-gold-FL-control.avi": ("day6", "C2", "gold (ctrl)", "10 FPS"),
-    "C2-day6-non-FL.avi": ("day6", "C2", "non-poled", "2.6 FPS"),
-    "C3-day6-gold-fl.avi": ("day6", "C3", "gold", "3.2 FPS"),
+    "C2-day6-non-FL.avi": ("day6", "C2", "gold", "2.6 FPS"),
+    "C3-day6-gold-fl.avi": ("day6", "C3", "non-poled", "3.2 FPS"),
     "C2-day8-gold-GCaMP6f-FL.avi": ("day8", "C2", "gold (dev)", "12.5 FPS"),
     "C3-day8-non-Jaz-fl.avi": ("day8", "C3", "non-poled", "11.1 FPS"),
 }
@@ -120,7 +120,7 @@ def fig_fl2_temporal():
         ],
         "C3": [
             ("day2", "C3-day2-fl.avi", "non-poled, 1.1 FPS"),
-            ("day6", "C3-day6-gold-fl.avi", "gold, 3.2 FPS"),
+            ("day6", "C3-day6-gold-fl.avi", "non-poled, 3.2 FPS"),
             ("day8", "C3-day8-non-Jaz-fl.avi", "non-poled, 11.1 FPS"),
         ],
     }

@@ -48,8 +48,8 @@ WELL_MAP = {
     "C2-day2-gold-FL.avi": ("day2", "C2", "gold", "GCaMP6f", "baseline"),
     "C3-day2-fl.avi": ("day2", "C3", "non-poled", "GCaMP6f", "baseline"),
     "C2-day6-gold-FL-control.avi": ("day6", "C2", "gold", "GCaMP6f", "control"),
-    "C2-day6-non-FL.avi": ("day6", "C2", "non-poled", "GCaMP6f", "on-device"),
-    "C3-day6-gold-fl.avi": ("day6", "C3", "gold", "GCaMP6f", "on-device"),
+    "C2-day6-non-FL.avi": ("day6", "C2", "gold", "GCaMP6f", "on-device"),
+    "C3-day6-gold-fl.avi": ("day6", "C3", "non-poled", "GCaMP6f", "on-device"),
     "C2-day8-gold-GCaMP6f-FL.avi": ("day8", "C2", "gold", "GCaMP6f", "on-device"),
     "C3-day8-non-Jaz-fl.avi": ("day8", "C3", "non-poled", "GCaMP6f", "on-device"),
 }
